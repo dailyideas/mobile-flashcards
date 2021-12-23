@@ -34,12 +34,12 @@ class InstructionType(Enum):
     UNKNOWN = enum.auto()
     ADD = enum.auto()
     DELETE = enum.auto()
-    INCREASE_PRIORITY = enum.auto()
-    DECREASE_PRIORITY = enum.auto()
+    CHANGE_FLASHCARD_PRIORITY = enum.auto()
     RESPOND_TO_QUESTION = enum.auto()
     CHANGE_FLASHCARD_SHOWING_FREQUENCY = enum.auto()
     SHOW_FLASHCARD = enum.auto()
     SHOW_INFO = enum.auto()
+    CHANGE_TIME_PRIORITY = enum.auto()
 
 
 @dataclass
@@ -76,12 +76,8 @@ class Instruction:
         elif textSplitted[0] == "del":
             self.Type = InstructionType.DELETE
             self.Key = textSplitted[1]
-        elif textSplitted[0] == "up":
-            self.Type = InstructionType.INCREASE_PRIORITY
-            self.Key = textSplitted[1]
-            self.Value = textSplitted[2] if len(textSplitted) >= 3 else "1"
-        elif textSplitted[0] == "down":
-            self.Type = InstructionType.DECREASE_PRIORITY
+        elif textSplitted[0] == "pri":
+            self.Type = InstructionType.CHANGE_FLASHCARD_PRIORITY
             self.Key = textSplitted[1]
             self.Value = textSplitted[2] if len(textSplitted) >= 3 else "1"
         elif textSplitted[0] == "re":
@@ -93,6 +89,10 @@ class Instruction:
         elif textSplitted[0] == "show":
             self.Type = InstructionType.SHOW_FLASHCARD
             self.Key = textSplitted[1]
+        elif textSplitted[0] == "time":
+            self.Type = InstructionType.CHANGE_TIME_PRIORITY
+            self.Key = textSplitted[1]
+            self.Value = textSplitted[2] if len(textSplitted) >= 3 else "1"
     
     
 if __name__ == "__main__":

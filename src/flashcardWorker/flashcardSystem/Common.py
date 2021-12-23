@@ -28,8 +28,8 @@ sys.path.insert(1, str(ROOT_DIRECTORY) )
 #### #### #### #### #### 
 #### Functions #### 
 #### #### #### #### #### 
-def TryWholeNumberStringToInt(s:str):
-    """ Regex to match all whole numbers
+def TryStringToInt(s):
+    """ Alternative: regex to match all whole numbers
     
     
         Reference
@@ -41,6 +41,8 @@ def TryWholeNumberStringToInt(s:str):
     if not isinstance(s, str):
         return s
     ## Main
-    if re.match(r"^\d+$", s) is None:
-        return s
-    return int(s)
+    try:
+        result = int(s)
+    except:
+        result = s
+    return result

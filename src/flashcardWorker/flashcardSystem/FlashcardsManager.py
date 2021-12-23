@@ -30,13 +30,13 @@ log = logging.getLogger(name=SCRIPT_NAME)
 sys.path.insert(1, str(ROOT_DIRECTORY) )
 #### Import local packages
 if __name__ == '__main__' or SCRIPT_DIRECTORY in sys.path:
-    from Common import TryWholeNumberStringToInt
+    from Common import TryStringToInt
     from Flashcard import Flashcard
     from FlashcardDatabaseMessenger import FlashcardDatabaseMessenger
     from FlashcardUserMessenger import FlashcardUserMessenger
     from Instruction import InstructionType, Instruction
 else:
-    from .Common import TryWholeNumberStringToInt
+    from .Common import TryStringToInt
     from .Flashcard import Flashcard
     from .FlashcardDatabaseMessenger import FlashcardDatabaseMessenger
     from .FlashcardUserMessenger import FlashcardUserMessenger
@@ -71,7 +71,7 @@ class FlashcardsManager:
 
 
     @property
-    def NumJobsPerHour(self):
+    def NumJobsPerHour(self) -> int:
         return self._numJobsPerHour
     
     
@@ -84,7 +84,7 @@ class FlashcardsManager:
                 
                 
     @property
-    def FlashcardShowingFrequency(self):
+    def FlashcardShowingFrequency(self) -> int:
         return self._dailyFlashcardShowingFrequency
     
     
@@ -189,7 +189,7 @@ class FlashcardsManager:
         return payload
 
 
-    def _GenerateTimeOfDayShowFlashcardsDistribution(self):
+    def _GenerateTimeOfDayShowFlashcardsDistribution(self) -> np.ndarray:
         timeOfDayPrioritiesSum = np.sum(self._timeOfDayPriorities)
         timeOfDayProbabilities = [i / timeOfDayPrioritiesSum for i in \
             self._timeOfDayPriorities]
@@ -204,7 +204,7 @@ class FlashcardsManager:
         return showFlashcardsDistribution
 
 
-    def _GenerateWithinHourShowFlashcardsDistribution(self):
+    def _GenerateWithinHourShowFlashcardsDistribution(self) -> np.ndarray:
         currentHour = datetime.datetime.now().hour
         flashcardsToShow = \
             self._timeOfDayShowFlashcardsDistribution[currentHour]
@@ -218,7 +218,7 @@ class FlashcardsManager:
         return showFlashcardsDistribution
         
         
-    def _UpdateMetadata(self):
+    def _UpdateMetadata(self) -> None:
         currentDatetime = datetime.datetime.now()
         if self._lastUpdateDatetime.date() != currentDatetime.date():
             self._timeOfDayShowFlashcardsDistribution = \
@@ -239,12 +239,9 @@ class FlashcardsManager:
         elif instruction.Type == InstructionType.DELETE:
             self._DeleteFlashcard(instruction=instruction, 
                 dbMessenger=dbMessenger)
-        elif instruction.Type == InstructionType.INCREASE_PRIORITY:
+        elif instruction.Type == InstructionType.CHANGE_FLASHCARD_PRIORITY:
             self._ChangeFlashcardPriority(instruction=instruction, 
-                dbMessenger=dbMessenger, sign=1)
-        elif instruction.Type == InstructionType.DECREASE_PRIORITY:
-            self._ChangeFlashcardPriority(instruction=instruction, 
-                dbMessenger=dbMessenger, sign=-1)
+                dbMessenger=dbMessenger)
         elif instruction.Type == InstructionType.RESPOND_TO_QUESTION and \
             self._questionToAnswer != -1:
             pass
@@ -257,6 +254,8 @@ class FlashcardsManager:
         elif instruction.Type == InstructionType.SHOW_INFO:
             self._ShowInfo(dbMessenger=dbMessenger, 
                 userMessenger=userMessenger)
+        elif instruction.Type == InstructionType.CHANGE_TIME_PRIORITY:
+            self._ChangeTimePriority(instruction=instruction)
         else:
             log.warning("Found an unknown instruction")
         
@@ -265,7 +264,7 @@ class FlashcardsManager:
     def _GetFlashcardFromDatabase(cls, instruction:Instruction, 
             dbMessenger:FlashcardDatabaseMessenger
         ) -> Flashcard:
-        key = TryWholeNumberStringToInt(s=instruction.Key)
+        key = TryStringToInt(s=instruction.Key)
         if isinstance(key, int):
             return dbMessenger.GetFlashcardById(id=key)
         else:
@@ -328,7 +327,7 @@ class FlashcardsManager:
     
     @classmethod
     def _ChangeFlashcardPriority(cls, instruction:Instruction, 
-            dbMessenger:FlashcardDatabaseMessenger, sign:int
+            dbMessenger:FlashcardDatabaseMessenger
         ) -> bool:
         ## Variables initialization
         targetFlashcard = cls._GetFlashcardFromDatabase(
@@ -338,11 +337,10 @@ class FlashcardsManager:
             log.warning(f"{cls._ChangeFlashcardPriority.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
             return False
         ## Main
-        change = TryWholeNumberStringToInt(instruction.Value)
+        change = TryStringToInt(instruction.Value)
         if not isinstance(change, int):
             log.warning(f"{cls._ChangeFlashcardPriority.__name__} could not obtain an integer for priority change. \"Value\": {instruction.Value}")
             return False
-        change = int(math.copysign(change, sign) )
         targetFlashcard.Priority += change
         isSuccess = dbMessenger.ReplaceFlashcard(flashcard=targetFlashcard)
         if isSuccess is False:
@@ -353,7 +351,7 @@ class FlashcardsManager:
     def _ChangeFlashcardShowingFrequency(self, 
             instruction:Instruction
         ) -> bool:
-        newFrequency = TryWholeNumberStringToInt(s=instruction.Value)
+        newFrequency = TryStringToInt(s=instruction.Value)
         if isinstance(newFrequency, int):
             self.FlashcardShowingFrequency = newFrequency
             return True
@@ -393,7 +391,8 @@ class FlashcardsManager:
                 startIdx = i * numElementsPerLine
                 endIdx = (i + 1) * numElementsPerLine
                 strSegment = np.array2string(arr[startIdx:endIdx], 
-                    separator=" ")
+                    separator=" ", 
+                    formatter={"int": lambda x: str(x).zfill(3) } )
                 strSegment = strSegment.replace("[", "").replace("]", "")
                 result += f"  {strSegment}\n"
             result = result.rstrip("\n")
@@ -427,6 +426,23 @@ class FlashcardsManager:
         if isSuccess is False:
             log.error(f"{self._ShowInfo.__name__} failed to show flashcard system info")
         return isSuccess
+    
+    
+    def _ChangeTimePriority(self, instruction:Instruction) -> bool:
+        ## Variables initialization
+        timeIdxToChange = TryStringToInt(instruction.Key)
+        change = TryStringToInt(instruction.Value)
+        ## Pre-condition
+        if not isinstance(timeIdxToChange, int) or \
+            timeIdxToChange >= len(self._timeOfDayPriorities):
+            log.warning(f"{self._ChangeTimePriority.__name__} could not obtain a valid time index for change to be applied. \"Key\": {instruction.Key}")
+            return False
+        if not isinstance(change, int):
+            log.warning(f"{self._ChangeTimePriority.__name__} could not obtain a valid value for the change. \"Value\": {instruction.Value}")
+            return False
+        ## Main
+        self._timeOfDayPriorities[timeIdxToChange] += change
+        return True
 
 
     def _RespondToQuestion(self, instruction:Instruction, 
