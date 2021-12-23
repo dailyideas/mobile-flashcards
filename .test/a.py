@@ -11,11 +11,11 @@ from telegram import Bot
 from b import *
 
 
-a = np.ones((24,), dtype=int)
-b = (
-    f"{a[0:6]}\n"
-    f"{a[6:12]}\n"
-    f"{a[12:18]}\n"
-    f"{a[18:24]}\n"
-)
-print(b)
+a = np.ones((24,), dtype=int) * 99
+a[0] = 100000
+b = np.max(a)
+c = a / b * 99
+d = c.astype(int)
+print(a)
+print(c, c.dtype)
+print(d)

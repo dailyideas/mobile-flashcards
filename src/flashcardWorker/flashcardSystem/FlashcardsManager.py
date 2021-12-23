@@ -53,7 +53,12 @@ class QuestionType(Enum):
 
 
 class FlashcardsManager:
+    LOWEST_TIME_PRIORITY = 0
+    HIGHEST_TIME_PRIORITY = 99
+    
     def __init__(self, numJobsPerHour:int=12) -> None:
+        ## Variables initialization
+        cls = type(self)
         ## Main
         self._numJobsPerHour = numJobsPerHour
         self._lastUpdateDatetime = None
@@ -61,7 +66,8 @@ class FlashcardsManager:
         self._questionToAnswer = -1
         self._questionType = QuestionType.UNKNOWN
         self._dailyFlashcardShowingFrequency = 10
-        self._timeOfDayPriorities = np.ones( (HOURS_IN_DAY,), dtype=int)
+        self._timeOfDayPriorities = np.ones( (HOURS_IN_DAY,), dtype=int) * \
+            cls.HIGHEST_TIME_PRIORITY
         self._timeOfDayShowFlashcardsDistribution = \
             self._GenerateTimeOfDayShowFlashcardsDistribution()
         self._withinHourShowFlashcardsDistribution = \
@@ -428,20 +434,38 @@ class FlashcardsManager:
         return isSuccess
     
     
-    def _ChangeTimePriority(self, instruction:Instruction) -> bool:
+    def _ChangeTimePriority(self, instruction:Instruction=None, 
+            timeIdx:int=None, change:int=None
+        ) -> bool:
         ## Variables initialization
-        timeIdxToChange = TryStringToInt(instruction.Key)
-        change = TryStringToInt(instruction.Value)
+        cls = type(self)
+        
+        ## Inner functions
+        def _RescalePriorities():
+            maxPriority = np.max(self._timeOfDayPriorities)
+            newPriorities_float = self._timeOfDayPriorities / maxPriority * \
+                cls.HIGHEST_TIME_PRIORITY
+            self._timeOfDayPriorities = newPriorities_float.astype(int)
+        
+        ## Variables initialization
+        if isinstance(instruction, Instruction):
+            timeIdx = TryStringToInt(instruction.Key)
+            change = TryStringToInt(instruction.Value)
         ## Pre-condition
-        if not isinstance(timeIdxToChange, int) or \
-            timeIdxToChange >= len(self._timeOfDayPriorities):
+        if not isinstance(timeIdx, int) or \
+            timeIdx >= len(self._timeOfDayPriorities):
             log.warning(f"{self._ChangeTimePriority.__name__} could not obtain a valid time index for change to be applied. \"Key\": {instruction.Key}")
             return False
         if not isinstance(change, int):
             log.warning(f"{self._ChangeTimePriority.__name__} could not obtain a valid value for the change. \"Value\": {instruction.Value}")
             return False
         ## Main
-        self._timeOfDayPriorities[timeIdxToChange] += change
+        change_unsigned = max(cls.LOWEST_TIME_PRIORITY, 
+            min( abs(change), cls.HIGHEST_TIME_PRIORITY) )
+        change = int(math.copysign(change_unsigned, change) )
+        self._timeOfDayPriorities[timeIdx] += change
+        if self._timeOfDayPriorities[timeIdx] > cls.HIGHEST_TIME_PRIORITY:
+            _RescalePriorities()
         return True
 
 
