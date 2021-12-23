@@ -28,7 +28,7 @@ sys.path.insert(1, str(ROOT_DIRECTORY) )
 #### #### #### #### #### 
 #### Functions #### 
 #### #### #### #### #### 
-def TryIntegerStringToInt(s:str):
+def TryWholeNumberStringToInt(s:str):
     """ Regex to match all whole numbers
     
     
@@ -37,6 +37,10 @@ def TryIntegerStringToInt(s:str):
         1. https://stackoverflow.com/questions/736043/checking-if-a-string-can-be-converted-to-float-in-python
         2. https://stackoverflow.com/questions/9043551/regex-that-matches-integers-in-between-whitespace-or-start-end-of-string-only
     """
+    ## Pre-condition
+    if not isinstance(s, str):
+        return s
+    ## Main
     if re.match(r"^\d+$", s) is None:
         return s
     return int(s)

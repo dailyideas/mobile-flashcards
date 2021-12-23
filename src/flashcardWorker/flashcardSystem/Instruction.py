@@ -79,11 +79,11 @@ class Instruction:
         elif textSplitted[0] == "up":
             self.Type = InstructionType.INCREASE_PRIORITY
             self.Key = textSplitted[1]
-            self.Value = textSplitted[2] if len(textSplitted) >= 3 else 1
+            self.Value = textSplitted[2] if len(textSplitted) >= 3 else "1"
         elif textSplitted[0] == "down":
             self.Type = InstructionType.DECREASE_PRIORITY
             self.Key = textSplitted[1]
-            self.Value = textSplitted[2] if len(textSplitted) >= 3 else 1
+            self.Value = textSplitted[2] if len(textSplitted) >= 3 else "1"
         elif textSplitted[0] == "re":
             self.Type = InstructionType.RESPOND_TO_QUESTION
             self.Value = textSplitted[1]

@@ -30,13 +30,13 @@ log = logging.getLogger(name=SCRIPT_NAME)
 sys.path.insert(1, str(ROOT_DIRECTORY) )
 #### Import local packages
 if __name__ == '__main__' or SCRIPT_DIRECTORY in sys.path:
-    from Common import TryIntegerStringToInt
+    from Common import TryWholeNumberStringToInt
     from Flashcard import Flashcard
     from FlashcardDatabaseMessenger import FlashcardDatabaseMessenger
     from FlashcardUserMessenger import FlashcardUserMessenger
     from Instruction import InstructionType, Instruction
 else:
-    from .Common import TryIntegerStringToInt
+    from .Common import TryWholeNumberStringToInt
     from .Flashcard import Flashcard
     from .FlashcardDatabaseMessenger import FlashcardDatabaseMessenger
     from .FlashcardUserMessenger import FlashcardUserMessenger
@@ -265,7 +265,7 @@ class FlashcardsManager:
     def _GetFlashcardFromDatabase(cls, instruction:Instruction, 
             dbMessenger:FlashcardDatabaseMessenger
         ) -> Flashcard:
-        key = TryIntegerStringToInt(s=instruction.Key)
+        key = TryWholeNumberStringToInt(s=instruction.Key)
         if isinstance(key, int):
             return dbMessenger.GetFlashcardById(id=key)
         else:
@@ -331,25 +331,29 @@ class FlashcardsManager:
             dbMessenger:FlashcardDatabaseMessenger, sign:int
         ) -> bool:
         ## Variables initialization
-        sign = int(math.copysign(1, sign) )
         targetFlashcard = cls._GetFlashcardFromDatabase(
             instruction=instruction, dbMessenger=dbMessenger)
         ## Pre-condition
         if targetFlashcard is None:
-            log.warning(f"{cls._HandleFlashcardPriorityIncrease.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
+            log.warning(f"{cls._ChangeFlashcardPriority.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
             return False
         ## Main
-        targetFlashcard.Priority += sign * instruction.Value
+        change = TryWholeNumberStringToInt(instruction.Value)
+        if not isinstance(change, int):
+            log.warning(f"{cls._ChangeFlashcardPriority.__name__} could not obtain an integer for priority change. \"Value\": {instruction.Value}")
+            return False
+        change = int(math.copysign(change, sign) )
+        targetFlashcard.Priority += change
         isSuccess = dbMessenger.ReplaceFlashcard(flashcard=targetFlashcard)
         if isSuccess is False:
-            log.error(f"{cls._HandleFlashcardPriorityIncrease.__name__} failed to update flashcard's priority. \"Key\": {targetFlashcard.Key}")
+            log.error(f"{cls._ChangeFlashcardPriority.__name__} failed to update flashcard's priority. \"Key\": {targetFlashcard.Key}")
         return isSuccess
     
     
     def _ChangeFlashcardShowingFrequency(self, 
             instruction:Instruction
         ) -> bool:
-        newFrequency = TryIntegerStringToInt(s=instruction.Value)
+        newFrequency = TryWholeNumberStringToInt(s=instruction.Value)
         if isinstance(newFrequency, int):
             self.FlashcardShowingFrequency = newFrequency
             return True
