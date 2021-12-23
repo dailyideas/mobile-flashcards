@@ -1,0 +1,10 @@
+## Project-level ignoring
+__pycache__/
+caches/
+logs/
+
+## Local-level ignoring
+.env
+.ipynb_checkpoints/
+.vscode/
+/database/

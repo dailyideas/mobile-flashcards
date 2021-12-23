@@ -1,0 +1,47 @@
+version: "3.1"
+services:
+    database:
+        container_name: database
+        restart: always
+        image: mongo:4.2.6-bionic
+        environment:
+            - MONGO_INITDB_DATABASE=${DB_NAME}
+            - MONGO_INITDB_ROOT_USERNAME=${DB_ROOT_USERNAME}
+            - MONGO_INITDB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+            - MONGO_INITDB_WORKER_USERNAME=${DB_WORKER_USERNAME}
+            - MONGO_INITDB_WORKER_PASSWORD=${DB_WORKER_PASSWORD}
+        networks:
+            - default
+        volumes:
+            - ./src/mongoDB/init.sh:/docker-entrypoint-initdb.d/init.sh
+            - ./database/mongodb:/data/db
+        deploy:
+            resources:
+                limits:
+                    cpus: 2
+                    memory: 512M
+    flashcard-worker:
+        container_name: flashcard-worker
+        restart: always
+        build: 
+            context: ./src/flashcardWorker
+            args:
+                - APP_TIMEZONE=${TIMEZONE}
+        environment:
+            - APP_RELEASE_MODE=${RELEASE_MODE}
+            - APP_DB_NAME=${DB_NAME}
+            - APP_DB_USERNAME=${DB_WORKER_USERNAME}
+            - APP_DB_PASSWORD=${DB_WORKER_PASSWORD}
+            - APP_TG_FLASHCARD_BOT_TOKEN=${TG_FLASHCARD_BOT_TOKEN}
+            - APP_TG_FLASHCARD_BOT_CHAT_ID=${TG_FLASHCARD_BOT_CHAT_ID}
+            - APP_FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR=${FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR}
+        volumes:
+            - ./logs/flashcardWorker:/usr/app/logs
+            - ./caches/flashcardWorker:/usr/app/caches
+        depends_on:
+            - database
+        deploy:
+            resources:
+                limits:
+                    cpus: 1
+                    memory: 256M
