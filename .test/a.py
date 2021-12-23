@@ -11,11 +11,7 @@ from telegram import Bot
 from b import *
 
 
-a = np.ones((24,), dtype=int) * 99
-a[0] = 100000
-b = np.max(a)
-c = a / b * 99
-d = c.astype(int)
-print(a)
-print(c, c.dtype)
-print(d)
+a = np.random.choice(2, 1, p=[0.9, 0.1] )
+print(a, type(a) )
+print(a[0], type(a[0]) )
+print(int(a), type(int(a)))

@@ -58,15 +58,18 @@ class FlashcardUserMessenger:
     def GetUserInstructions(self, latestUpdateId:int=None) -> list:
         ## Inner functions
         def _GetInstruction(update:telegram.Update) -> None:
-            ## Prologue
-            log.info( (
-                f"Got an update from user. "
-                f"\"updateId\": {update.update_id}, "
-                f"\"text\"={update.message.text}"
-            ) )
             ## Variables intialization
             updateId = update.update_id
-            text = update.message.text
+            text = None
+            if isinstance(update.message, telegram.Message):
+                text = update.message.text
+            if text is None:
+                text = ""
+            log.info( (
+                f"Got an update from user. "
+                f"\"updateId\": {updateId}, "
+                f"\"text\"={text}"
+            ) )
             ## Pre-condition
             if not isinstance(updateId, int):
                 log.error(f"{self.GetUserInstructions.__name__} got an updateId which is not an int")

@@ -71,7 +71,7 @@ class Instruction:
         if textSplitted[0] == "add":
             self.Type = InstructionType.ADD
             self.Key = textSplitted[1]
-            self.Value = textSplitted[2]
+            self.Value = textSplitted[2] if len(textSplitted) >= 3 else ""
             self.Remarks = textSplitted[3] if len(textSplitted) == 4 else ""
         elif textSplitted[0] == "del":
             self.Type = InstructionType.DELETE

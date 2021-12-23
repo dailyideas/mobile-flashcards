@@ -54,7 +54,7 @@ class QuestionType(Enum):
 
 class FlashcardsManager:
     LOWEST_TIME_PRIORITY = 0
-    HIGHEST_TIME_PRIORITY = 99
+    HIGHEST_TIME_PRIORITY = 999
     
     def __init__(self, numJobsPerHour:int=12) -> None:
         ## Variables initialization
@@ -66,8 +66,12 @@ class FlashcardsManager:
         self._questionToAnswer = -1
         self._questionType = QuestionType.UNKNOWN
         self._dailyFlashcardShowingFrequency = 10
-        self._timeOfDayPriorities = np.ones( (HOURS_IN_DAY,), dtype=int) * \
-            cls.HIGHEST_TIME_PRIORITY
+        self._timeOfDayPriorities = np.array( [
+                0, 0, 0, 0, 0, 0,
+                1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1,
+                1, 1, 1, 1, 1, 1
+            ], dtype=int) * cls.HIGHEST_TIME_PRIORITY // 2
         self._timeOfDayShowFlashcardsDistribution = \
             self._GenerateTimeOfDayShowFlashcardsDistribution()
         self._withinHourShowFlashcardsDistribution = \
@@ -347,6 +351,8 @@ class FlashcardsManager:
         if not isinstance(change, int):
             log.warning(f"{cls._ChangeFlashcardPriority.__name__} could not obtain an integer for priority change. \"Value\": {instruction.Value}")
             return False
+        if change == 0:
+            return True
         targetFlashcard.Priority += change
         isSuccess = dbMessenger.ReplaceFlashcard(flashcard=targetFlashcard)
         if isSuccess is False:
@@ -366,22 +372,27 @@ class FlashcardsManager:
             return False
     
     
-    @classmethod
-    def _ShowFlashcard(cls, instruction:Instruction, 
+    def _ShowFlashcard(self, instruction:Instruction, 
             dbMessenger:FlashcardDatabaseMessenger, 
             userMessenger:FlashcardUserMessenger
         ) -> bool:
         ## Variables initialization
-        targetFlashcard = cls._GetFlashcardFromDatabase(
+        targetFlashcard = self._GetFlashcardFromDatabase(
             instruction=instruction, dbMessenger=dbMessenger)
         ## Pre-condition
         if targetFlashcard is None:
-            log.warning(f"{cls._ShowFlashcard.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
+            log.warning(f"{self._ShowFlashcard.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
             return False
         ## Main
         isSuccess = userMessenger.ShowFlashcard(flashcard=targetFlashcard)
         if isSuccess is False:
-            log.error(f"{cls._ShowFlashcard.__name__} failed to show flashcard. \"Key\": {targetFlashcard.Key}")
+            log.error(f"{self._ShowFlashcard.__name__} failed to show flashcard. \"Key\": {targetFlashcard.Key}")
+        ## Post-processing
+        if isSuccess:
+            currentHour = datetime.datetime.now().hour
+            priorityChange = int(np.random.choice(2, 1, p=[0.4, 0.6] ) )
+            self._ChangeTimePriority(timeIdx=currentHour, 
+                change=priorityChange)
         return isSuccess
     
     
@@ -452,13 +463,15 @@ class FlashcardsManager:
             timeIdx = TryStringToInt(instruction.Key)
             change = TryStringToInt(instruction.Value)
         ## Pre-condition
-        if not isinstance(timeIdx, int) or \
+        if not isinstance(timeIdx, int) or timeIdx < 0 or \
             timeIdx >= len(self._timeOfDayPriorities):
             log.warning(f"{self._ChangeTimePriority.__name__} could not obtain a valid time index for change to be applied. \"Key\": {instruction.Key}")
             return False
         if not isinstance(change, int):
             log.warning(f"{self._ChangeTimePriority.__name__} could not obtain a valid value for the change. \"Value\": {instruction.Value}")
             return False
+        if change == 0:
+            return True
         ## Main
         change_unsigned = max(cls.LOWEST_TIME_PRIORITY, 
             min( abs(change), cls.HIGHEST_TIME_PRIORITY) )
