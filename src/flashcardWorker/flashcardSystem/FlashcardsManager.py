@@ -188,10 +188,7 @@ class FlashcardsManager:
             if flashcard.Id in showedFlashcardsId:
                 return
             ## Main
-            if self._questionToAnswer == -1 and FlipBiasedCoin(pOf1=0.1) == 1:
-                _ShowFlashcardAsQuiz(flashcard=flashcard)
-            else:
-                _ShowFlashcardAndReducePriority(flashcard=flashcard)
+            _ShowFlashcardAndReducePriority(flashcard=flashcard)
             ## Post-processing
             showedFlashcardsId.append(flashcard.Id)
 
