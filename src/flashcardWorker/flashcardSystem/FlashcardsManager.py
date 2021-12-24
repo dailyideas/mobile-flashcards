@@ -57,6 +57,7 @@ class FlashcardsManager:
         self._lastUpdateDatetime = None
         self._bot_latestUpdateId = None ## int
         self._questionToAnswer = -1
+        self._questionAskedDatetime = datetime.datetime.now()
         self._dailyFlashcardShowingFrequency = 10
         self._timeOfDayPriorities = np.array( [
                 0, 0, 0, 0, 0, 0,
@@ -156,6 +157,7 @@ class FlashcardsManager:
             ## Post-processing
             if isSuccess:
                 self._questionToAnswer = flashcard.Id
+                self._questionAskedDatetime = datetime.datetime.now()
             else:
                 log.error(f"{_ShowFlashcardAsQuiz.__name__} failed to show flashcard. \"Id\": {flashcard.Id}")
             return isSuccess
@@ -249,6 +251,11 @@ class FlashcardsManager:
         if self._lastUpdateDatetime.hour != currentDatetime.hour:
             self._withinHourShowFlashcardsDistribution = \
                 self._GenerateWithinHourShowFlashcardsDistribution()
+        if self._questionToAnswer != -1:
+            daysPassedFromLastQuestion = \
+                (currentDatetime - self._questionAskedDatetime).days
+            if daysPassedFromLastQuestion >= 1:
+                self._questionToAnswer = -1
         self._lastUpdateDatetime = currentDatetime
 
 
