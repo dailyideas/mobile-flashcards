@@ -28,10 +28,10 @@ sys.path.insert(1, str(ROOT_DIRECTORY) )
 #### Import local packages
 if __name__ == '__main__' or SCRIPT_DIRECTORY in sys.path:
     from Flashcard import Flashcard
-    from Instruction import Instruction
+    from Instruction import InstructionType, Instruction
 else:
     from .Flashcard import Flashcard
-    from .Instruction import Instruction
+    from .Instruction import InstructionType, Instruction
 
 
 #### #### #### #### #### 
@@ -57,13 +57,16 @@ class FlashcardUserMessenger:
         
     def GetUserInstructions(self, latestUpdateId:int=None) -> list:
         ## Inner functions
-        def _GetInstruction(update:telegram.Update) -> None:
+        def _GetInstruction(update:telegram.Update) -> Instruction:
             ## Variables intialization
             updateId = update.update_id
-            text = None
-            if isinstance(update.message, telegram.Message):
+            if isinstance(update.message, telegram.Message) and \
+                isinstance(update.message.text, str):
                 text = update.message.text
-            if text is None:
+            elif isinstance(update.edited_message, telegram.Message) and \
+                isinstance(update.edited_message.text, str):
+                text = update.edited_message.text
+            else:
                 text = ""
             log.info( (
                 f"Got an update from user. "
@@ -73,12 +76,13 @@ class FlashcardUserMessenger:
             ## Pre-condition
             if not isinstance(updateId, int):
                 log.error(f"{self.GetUserInstructions.__name__} got an updateId which is not an int")
-                return
+                return Instruction(Type=InstructionType.UNKNOWN)
             if not isinstance(text, str):
                 log.error(f"{self.GetUserInstructions.__name__} got a text which is not a string")
-                return
+                return Instruction(Type=InstructionType.UNKNOWN)
             instruction = Instruction(Id=updateId, text=text)
             return instruction
+        
         ## Main
         if latestUpdateId is None:
             updates = self._bot.get_updates(timeout=2.)
