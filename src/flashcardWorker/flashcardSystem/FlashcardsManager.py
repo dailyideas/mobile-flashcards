@@ -262,7 +262,7 @@ class FlashcardsManager:
         ) -> None:
         if instruction.Type == InstructionType.ADD:
             self._InsertFlashcard(instruction=instruction, 
-                dbMessenger=dbMessenger)
+                dbMessenger=dbMessenger, userMessenger=userMessenger)
         elif instruction.Type == InstructionType.DELETE:
             self._DeleteFlashcard(instruction=instruction, 
                 dbMessenger=dbMessenger)
@@ -300,7 +300,8 @@ class FlashcardsManager:
 
     @classmethod
     def _InsertFlashcard(cls, instruction:Instruction, 
-            dbMessenger:FlashcardDatabaseMessenger
+            dbMessenger:FlashcardDatabaseMessenger,
+            userMessenger:FlashcardUserMessenger
         ) -> bool:
         existingFlashcard = dbMessenger.GetFlashcardByKey(
             key=instruction.Key)
@@ -313,7 +314,11 @@ class FlashcardsManager:
             isSuccess = dbMessenger.ReplaceFlashcard(
                 flashcard=existingFlashcard)
             if isSuccess:
-                log.info(f"Replaced an existing flashcard. \"Key\": {existingFlashcard.Key}")
+                isSuccess = userMessenger.ShowFlashcard_MajorFields(
+                    flashcard=existingFlashcard, 
+                    prefix="Updated existing:\n")
+                if isSuccess is False:
+                    log.error(f"{cls._InsertFlashcard.__name__} failed to show the flashcard")
             else:
                 log.error(f"{cls._InsertFlashcard.__name__} failed to replace an existing flashcard. \"Key\": {existingFlashcard.Key}")
         else:
@@ -325,12 +330,16 @@ class FlashcardsManager:
             )
             isSuccess = dbMessenger.InsertFlashcard(flashcard=newFlashcard)
             if isSuccess:
-                log.info(f"Inserted a flashcard. \"Key\": {newFlashcard.Key}")
+                isSuccess = userMessenger.ShowFlashcard_MajorFields(
+                    flashcard=newFlashcard, 
+                    prefix="Inserted new:\n")
+                if isSuccess is False:
+                    log.error(f"{cls._InsertFlashcard.__name__} failed to show the flashcard")
             else:
                 log.error(f"{cls._InsertFlashcard.__name__} failed to insert flashcard. \"Key\": {newFlashcard.Key}")
         return isSuccess
-    
-    
+
+
     @classmethod
     def _DeleteFlashcard(cls, instruction:Instruction, 
             dbMessenger:FlashcardDatabaseMessenger
