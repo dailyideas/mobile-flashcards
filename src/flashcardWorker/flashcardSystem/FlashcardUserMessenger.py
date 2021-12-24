@@ -47,12 +47,47 @@ class FlashcardUserMessenger:
         self._chatId = chatId ## int
     
     
-    def ShowFlashcard(self, flashcard:Flashcard) -> bool:
+    def ShowFlashcard(self, flashcard:Flashcard, infoToShow:list=[],
+            prefix:str="", suffix:str=""
+        ) -> bool:
         ## Variables initialization
         cls = type(self)
         ## Main
-        texts = cls._FlashcardToString(flashcard=flashcard)
+        texts = cls._FlashcardToString(flashcard=flashcard, 
+            infoToShow=infoToShow)
+        texts = f"{prefix}{texts}{suffix}"
         return self.ShowCustomTexts(customTexts=texts)
+    
+    
+    def ShowFlashcard_MajorFields(self, flashcard:Flashcard, 
+            prefix:str="", suffix:str=""
+        ):
+        infoToShow = [
+            Flashcard.KEY_TAG,
+            Flashcard.VALUE_TAG,
+            Flashcard.ID_TAG,
+            Flashcard.PRIORITY_TAG,
+        ]
+        if isinstance(flashcard.Remarks, str) and len(flashcard.Remarks):
+            infoToShow.append(Flashcard.REMARKS_TAG)
+        return self.ShowFlashcard(flashcard=flashcard, 
+            infoToShow=infoToShow, prefix=prefix, suffix=suffix)
+        
+        
+    def ShowFlashcard_ValueOnly(self, flashcard:Flashcard, 
+            prefix:str="", suffix:str=""
+        ):
+        infoToShow = [Flashcard.VALUE_TAG]
+        return self.ShowFlashcard(flashcard=flashcard, 
+            infoToShow=infoToShow, prefix=prefix, suffix=suffix)
+        
+        
+    def ShowCustomTexts(self, customTexts:str) -> bool:
+        result = self._bot.send_message(text=customTexts, 
+            chat_id=self._chatId,
+            parse_mode=telegram.constants.PARSEMODE_MARKDOWN_V2,
+            disable_notification=True, timeout=10)
+        return isinstance(result, telegram.Message)
         
         
     def GetUserInstructions(self, latestUpdateId:int=None) -> list:
@@ -94,18 +129,14 @@ class FlashcardUserMessenger:
             newInstruction = _GetInstruction(update=update)
             instructions.append(newInstruction)
         return instructions
-    
-    
-    def ShowCustomTexts(self, customTexts:str) -> bool:
-        result = self._bot.send_message(text=customTexts, 
-            chat_id=self._chatId,
-            parse_mode=telegram.constants.PARSEMODE_MARKDOWN_V2,
-            disable_notification=True, timeout=10)
-        return isinstance(result, telegram.Message)
 
 
     @classmethod
-    def _FlashcardToString(cls, flashcard:Flashcard):
+    def _FlashcardToString(cls, flashcard:Flashcard, infoToShow:list=[] ):
+        ## Pre-processing
+        if not isinstance(infoToShow, list):
+            infoToShow = [infoToShow]
+        ## Main
         """ Characters to escape in Markdown
         
             Reference
@@ -137,11 +168,20 @@ class FlashcardUserMessenger:
             ---- ----
             1. https://stackoverflow.com/a/18935765
         """
-        key = flashcard.Key.translate(specialCharactersTranslation)
-        value = flashcard.Value.translate(specialCharactersTranslation)
-        remarks = flashcard.Remarks.translate(specialCharactersTranslation)
-        return (
-            f"*{key}*\n\n"
-            f"{value}\n\n"
-            f"{remarks}\n\n"
-            f"{flashcard.Id}    {flashcard.Priority}")
+        result = ""
+        if Flashcard.KEY_TAG in infoToShow:
+            key = flashcard.Key.translate(specialCharactersTranslation)
+            result += f"*{key}*\n\n"
+        if Flashcard.VALUE_TAG in infoToShow:
+            value = flashcard.Value.translate(specialCharactersTranslation)
+            result += f"{value}\n\n"
+        if Flashcard.REMARKS_TAG in infoToShow:
+            remarks = flashcard.Remarks.translate(specialCharactersTranslation)
+            result += f"{remarks}\n\n"
+        if Flashcard.ID_TAG in infoToShow:
+            result += f"{flashcard.Id}\n"
+        if Flashcard.PRIORITY_TAG in infoToShow:
+            result += f"{flashcard.Priority}\n"
+        result = result.rstrip("\n")
+        return result
+        

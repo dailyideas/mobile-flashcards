@@ -1,6 +1,7 @@
 import datetime, logging, os, pathlib, sys, time
-import re
 from os import path
+
+import numpy as np
 
 
 #### #### #### #### #### 
@@ -46,3 +47,8 @@ def TryStringToInt(s):
     except:
         result = s
     return result
+
+
+def FlipBiasedCoin(pOf1:float):
+    pOf1 = max(0, min(pOf1, 1) )
+    return int(np.random.choice(2, 1, p=[ (1 - pOf1), pOf1] ) )

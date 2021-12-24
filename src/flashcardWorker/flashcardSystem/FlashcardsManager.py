@@ -1,7 +1,6 @@
 from __future__ import annotations
 import datetime, logging, os, pathlib, sys, time
-import enum, math, pickle, re
-from enum import Enum
+import math, pickle
 from os import path
 
 import numpy as np
@@ -30,13 +29,13 @@ log = logging.getLogger(name=SCRIPT_NAME)
 sys.path.insert(1, str(ROOT_DIRECTORY) )
 #### Import local packages
 if __name__ == '__main__' or SCRIPT_DIRECTORY in sys.path:
-    from Common import TryStringToInt
+    from Common import TryStringToInt, FlipBiasedCoin
     from Flashcard import Flashcard
     from FlashcardDatabaseMessenger import FlashcardDatabaseMessenger
     from FlashcardUserMessenger import FlashcardUserMessenger
     from Instruction import InstructionType, Instruction
 else:
-    from .Common import TryStringToInt
+    from .Common import TryStringToInt, FlipBiasedCoin
     from .Flashcard import Flashcard
     from .FlashcardDatabaseMessenger import FlashcardDatabaseMessenger
     from .FlashcardUserMessenger import FlashcardUserMessenger
@@ -46,12 +45,6 @@ else:
 #### #### #### #### #### 
 #### Class #### 
 #### #### #### #### #### 
-class QuestionType(Enum):
-    UNKNOWN = enum.auto()
-    ASK_KEY = enum.auto()
-    ASK_VALUE = enum.auto()
-
-
 class FlashcardsManager:
     LOWEST_TIME_PRIORITY = 0
     HIGHEST_TIME_PRIORITY = 999
@@ -64,7 +57,6 @@ class FlashcardsManager:
         self._lastUpdateDatetime = None
         self._bot_latestUpdateId = None ## int
         self._questionToAnswer = -1
-        self._questionType = QuestionType.UNKNOWN
         self._dailyFlashcardShowingFrequency = 10
         self._timeOfDayPriorities = np.array( [
                 0, 0, 0, 0, 0, 0,
@@ -129,7 +121,13 @@ class FlashcardsManager:
                 dbMessenger=dbMessenger, userMessenger=userMessenger)
         ## Post-processing
         if len(instructions):
+            #### Store latest update_id for next telegram.Bot.get_updates
             self._bot_latestUpdateId = instructions[-1].Id
+            #### Possible increase of priority at current hour
+            currentHour = datetime.datetime.now().hour
+            priorityChange = FlipBiasedCoin(pOf1=0.6)
+            self._ChangeTimePriority(timeIdx=currentHour, 
+                change=priorityChange)
 
 
     def ShowRandomFlashcardsWithPriority(self,
@@ -139,15 +137,27 @@ class FlashcardsManager:
         ## Inner functions
         def _ShowFlashcardAndReducePriority(flashcard:Flashcard) -> bool:
             ## Main
-            isSuccess = userMessenger.ShowFlashcard(flashcard=flashcard)
+            isSuccess = userMessenger.ShowFlashcard_MajorFields(
+                flashcard=flashcard)
             ## Post-processing
             if isSuccess:
                 flashcard.Priority -= 1
                 isSuccess = dbMessenger.ReplaceFlashcard(flashcard=flashcard)
                 if isSuccess is False:
-                    log.error(f"{_ShowFlashcardAndReducePriority.__name__} failed to replace flashcard")
+                    log.error(f"{_ShowFlashcardAndReducePriority.__name__} failed to replace flashcard. \"Id\": {flashcard.Id}")
             else:
-                log.error(f"{_ShowFlashcardAndReducePriority.__name__} failed to show flashcard")
+                log.error(f"{_ShowFlashcardAndReducePriority.__name__} failed to show flashcard. \"Id\": {flashcard.Id}")
+            return isSuccess
+        
+        def _ShowFlashcardAsQuiz(flashcard:Flashcard) -> bool:
+            ## Main
+            isSuccess = userMessenger.ShowFlashcard_ValueOnly(
+                flashcard=flashcard, prefix="What is the key of value: ")
+            ## Post-processing
+            if isSuccess:
+                self._questionToAnswer = flashcard.Id
+            else:
+                log.error(f"{_ShowFlashcardAsQuiz.__name__} failed to show flashcard. \"Id\": {flashcard.Id}")
             return isSuccess
         
         ## Pre-processing
@@ -156,9 +166,9 @@ class FlashcardsManager:
         showedFlashcardsId = []
         ## Main
         currentTime = datetime.datetime.now()
-        currentHour = currentTime.hour
+        currentIdxInHour = currentTime.minute * self._numJobsPerHour // 60
         numCardsToShow = int(
-            self._timeOfDayShowFlashcardsDistribution[currentHour] )
+            self._withinHourShowFlashcardsDistribution[currentIdxInHour] )
         minPriority = Flashcard.GetRandomPriorityValue()
         maxTimestamp = (currentTime - datetime.timedelta(days=1) ).timestamp()
         maxTimestamp = int(maxTimestamp)
@@ -176,7 +186,10 @@ class FlashcardsManager:
             if flashcard.Id in showedFlashcardsId:
                 return
             ## Main
-            _ShowFlashcardAndReducePriority(flashcard=flashcard)
+            if self._questionToAnswer == -1 and FlipBiasedCoin(pOf1=0.1) == 1:
+                _ShowFlashcardAsQuiz(flashcard=flashcard)
+            else:
+                _ShowFlashcardAndReducePriority(flashcard=flashcard)
             ## Post-processing
             showedFlashcardsId.append(flashcard.Id)
 
@@ -252,9 +265,9 @@ class FlashcardsManager:
         elif instruction.Type == InstructionType.CHANGE_FLASHCARD_PRIORITY:
             self._ChangeFlashcardPriority(instruction=instruction, 
                 dbMessenger=dbMessenger)
-        elif instruction.Type == InstructionType.RESPOND_TO_QUESTION and \
-            self._questionToAnswer != -1:
-            pass
+        elif instruction.Type == InstructionType.RESPOND_TO_QUESTION:
+            self._RespondToQuestion(instruction=instruction, 
+                dbMessenger=dbMessenger, userMessenger=userMessenger)
         elif instruction.Type == \
             InstructionType.CHANGE_FLASHCARD_SHOWING_FREQUENCY:
             self._ChangeFlashcardShowingFrequency(instruction=instruction)
@@ -360,6 +373,40 @@ class FlashcardsManager:
         return isSuccess
     
     
+    def _RespondToQuestion(self, instruction:Instruction, 
+            dbMessenger:FlashcardDatabaseMessenger,
+            userMessenger:FlashcardUserMessenger
+        ) -> bool:
+        ## Pre-condition
+        if self._questionToAnswer == -1:
+            log.warning(f"{self._RespondToQuestion.__name__} found no question to be answered")
+            return False
+        ## Variables initialization
+        targetFlashcard = dbMessenger.GetFlashcardById(
+            id=self._questionToAnswer)
+        ## Pre-condition
+        if targetFlashcard is None:
+            log.warning(f"{self._RespondToQuestion.__name__} could not find the target flashcard. \"Id\": {self._questionToAnswer}")
+            self._questionToAnswer = -1
+            return False
+        ## Main
+        answerIsCorrect = instruction.Value == targetFlashcard.Key
+        targetFlashcard.Priority -= 1 if answerIsCorrect else -1
+        ## Post-processing
+        #### Show answer to the question
+        if answerIsCorrect:
+            isSuccess = userMessenger.ShowFlashcard_MajorFields(
+                flashcard=targetFlashcard, prefix="*Correct*\n\n")
+        else:
+            isSuccess = userMessenger.ShowFlashcard_MajorFields(
+                flashcard=targetFlashcard, prefix="*Wrong*\n\n")
+        if isSuccess is False:
+            log.error(f"{self._RespondToQuestion.__name__} failed to show the flashcard")
+        #### Reset the question
+        self._questionToAnswer = -1
+        return True
+    
+    
     def _ChangeFlashcardShowingFrequency(self, 
             instruction:Instruction
         ) -> bool:
@@ -384,15 +431,10 @@ class FlashcardsManager:
             log.warning(f"{self._ShowFlashcard.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
             return False
         ## Main
-        isSuccess = userMessenger.ShowFlashcard(flashcard=targetFlashcard)
+        isSuccess = userMessenger.ShowFlashcard_MajorFields(
+            flashcard=targetFlashcard)
         if isSuccess is False:
             log.error(f"{self._ShowFlashcard.__name__} failed to show flashcard. \"Key\": {targetFlashcard.Key}")
-        ## Post-processing
-        if isSuccess:
-            currentHour = datetime.datetime.now().hour
-            priorityChange = int(np.random.choice(2, 1, p=[0.4, 0.6] ) )
-            self._ChangeTimePriority(timeIdx=currentHour, 
-                change=priorityChange)
         return isSuccess
     
     
@@ -480,27 +522,3 @@ class FlashcardsManager:
         if self._timeOfDayPriorities[timeIdx] > cls.HIGHEST_TIME_PRIORITY:
             _RescalePriorities()
         return True
-
-
-    def _RespondToQuestion(self, instruction:Instruction, 
-            dbMessenger:FlashcardDatabaseMessenger
-        ) -> bool:
-        # ## Variables initialization
-        # cls = type(self)
-        # flashcards = FlashcardDatabaseMessenger.GetFlashcardsById(
-        #     dbCollection, self._questionToAnswer)
-        # ## Pre-condition
-        # if len(flashcards) == 0:
-        #     log.error(f"{cls.__name__}._RespondToQuestion cannot obtain flashcard with \"ID\"={self._questionToAnswer}")
-        #     return False
-        # flashcard = flashcards[0]
-        # ## Main
-        # self._questionToAnswer = -1
-        # self._questionType = QuestionType.UNKNOWN
-
-        # if self._questionType == QuestionType.ASK_KEY:
-        #     return instruction.Value == flashcard.Key
-        # if self._questionType == QuestionType.ASK_VALUE:
-        #     return instruction.Value == flashcard.Value
-        # return False
-        pass
