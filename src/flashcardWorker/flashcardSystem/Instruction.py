@@ -57,17 +57,21 @@ class Instruction:
         if not isinstance(text, str):
             self.Type = InstructionType.UNKNOWN
             return
-        ## Variables initialization
+        
+        ## Main
         textSplitted = text.split(";")
-        if len(textSplitted) == 1:
-            self.Type = InstructionType.SHOW_INFO if \
-                textSplitted[0] == "info" else InstructionType.UNKNOWN
-            return
         if len(textSplitted) > 4:
             textSplitted[3] = ";".join(textSplitted[3:] )
             del textSplitted[4:]
         textSplitted = [t.strip() for t in textSplitted]
-        ## Main
+        
+        if len(textSplitted) == 1:
+            if textSplitted[0] == "info":
+                self.Type = InstructionType.SHOW_INFO
+            else:
+                self.Type = InstructionType.UNKNOWN
+            return
+        
         if textSplitted[0] == "add":
             self.Type = InstructionType.ADD
             self.Key = textSplitted[1]
