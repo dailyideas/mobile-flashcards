@@ -74,6 +74,14 @@ class FlashcardUserMessenger:
             infoToShow=infoToShow, prefix=prefix, suffix=suffix)
         
         
+    def ShowFlashcard_KeyOnly(self, flashcard:Flashcard, 
+            prefix:str="", suffix:str=""
+        ):
+        infoToShow = [Flashcard.KEY_TAG]
+        return self.ShowFlashcard(flashcard=flashcard, 
+            infoToShow=infoToShow, prefix=prefix, suffix=suffix)
+        
+        
     def ShowFlashcard_ValueOnly(self, flashcard:Flashcard, 
             prefix:str="", suffix:str=""
         ):

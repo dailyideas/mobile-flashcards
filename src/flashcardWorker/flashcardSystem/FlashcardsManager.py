@@ -94,6 +94,7 @@ class FlashcardsManager:
     @FlashcardShowingFrequency.setter
     def FlashcardShowingFrequency(self, value:int):
         if self._dailyFlashcardShowingFrequency != value:
+            ## Only reset the variables below if the value is changed
             self._dailyFlashcardShowingFrequency = value
             self._timeOfDayShowFlashcardsDistribution = \
                 self._GenerateTimeOfDayShowFlashcardsDistribution()
@@ -142,6 +143,7 @@ class FlashcardsManager:
                 flashcard=flashcard)
             ## Post-processing
             if isSuccess:
+                #### Update the priority of the flashcard
                 flashcard.Priority -= 1
                 isSuccess = dbMessenger.ReplaceFlashcard(flashcard=flashcard)
                 if isSuccess is False:
@@ -156,6 +158,7 @@ class FlashcardsManager:
                 flashcard=flashcard, prefix="What is the key of value: ")
             ## Post-processing
             if isSuccess:
+                #### Record the question being asked
                 self._questionToAnswer = flashcard.Id
                 self._questionAskedDatetime = datetime.datetime.now()
             else:
@@ -164,8 +167,6 @@ class FlashcardsManager:
         
         ## Pre-processing
         self._UpdateMetadata()
-        ## Variables initialization
-        showedFlashcardsId = []
         ## Main
         currentTime = datetime.datetime.now()
         currentIdxInHour = currentTime.minute * self._numJobsPerHour // 60
@@ -183,10 +184,11 @@ class FlashcardsManager:
                 f"\"numCardsToShow\"={numCardsToShow}, \"minPriority\"={minPriority}, \"maxTimestamp\"={maxTimestamp}"
             ) )
             return
+        showedFlashcardsId = []
         for flashcard in flashcards:
             ## Pre-condition
             if flashcard.Id in showedFlashcardsId:
-                return
+                continue
             ## Main
             _ShowFlashcardAndReducePriority(flashcard=flashcard)
             ## Post-processing
@@ -265,16 +267,17 @@ class FlashcardsManager:
                 dbMessenger=dbMessenger, userMessenger=userMessenger)
         elif instruction.Type == InstructionType.DELETE:
             self._DeleteFlashcard(instruction=instruction, 
-                dbMessenger=dbMessenger)
+                dbMessenger=dbMessenger, userMessenger=userMessenger)
         elif instruction.Type == InstructionType.CHANGE_FLASHCARD_PRIORITY:
             self._ChangeFlashcardPriority(instruction=instruction, 
-                dbMessenger=dbMessenger)
+                dbMessenger=dbMessenger, userMessenger=userMessenger)
         elif instruction.Type == InstructionType.RESPOND_TO_QUESTION:
             self._RespondToQuestion(instruction=instruction, 
                 dbMessenger=dbMessenger, userMessenger=userMessenger)
         elif instruction.Type == \
             InstructionType.CHANGE_FLASHCARD_SHOWING_FREQUENCY:
-            self._ChangeFlashcardShowingFrequency(instruction=instruction)
+            self._ChangeFlashcardShowingFrequency(instruction=instruction,
+                userMessenger=userMessenger)
         elif instruction.Type == InstructionType.SHOW_FLASHCARD:
             self._ShowFlashcard(instruction=instruction, 
                 dbMessenger=dbMessenger, userMessenger=userMessenger)
@@ -314,6 +317,7 @@ class FlashcardsManager:
             isSuccess = dbMessenger.ReplaceFlashcard(
                 flashcard=existingFlashcard)
             if isSuccess:
+                log.info(f"{cls._InsertFlashcard.__name__} updated a flashcard. \"Key\": {existingFlashcard.Key}")
                 isSuccess = userMessenger.ShowFlashcard_MajorFields(
                     flashcard=existingFlashcard, 
                     prefix="Updated existing:\n")
@@ -330,11 +334,12 @@ class FlashcardsManager:
             )
             isSuccess = dbMessenger.InsertFlashcard(flashcard=newFlashcard)
             if isSuccess:
+                log.info(f"{cls._InsertFlashcard.__name__} inserted a flashcard. \"Key\": {newFlashcard.Key}")
                 isSuccess = userMessenger.ShowFlashcard_MajorFields(
                     flashcard=newFlashcard, 
                     prefix="Inserted new:\n")
                 if isSuccess is False:
-                    log.error(f"{cls._InsertFlashcard.__name__} failed to show the flashcard")
+                    log.error(f"{cls._InsertFlashcard.__name__} failed to show the flashcard. \"Key\": {newFlashcard.Key}")
             else:
                 log.error(f"{cls._InsertFlashcard.__name__} failed to insert flashcard. \"Key\": {newFlashcard.Key}")
         return isSuccess
@@ -342,7 +347,8 @@ class FlashcardsManager:
 
     @classmethod
     def _DeleteFlashcard(cls, instruction:Instruction, 
-            dbMessenger:FlashcardDatabaseMessenger
+            dbMessenger:FlashcardDatabaseMessenger,
+            userMessenger:FlashcardUserMessenger
         ) -> bool:
         ## Variables initialization
         targetFlashcard = cls._GetFlashcardFromDatabase(
@@ -355,7 +361,12 @@ class FlashcardsManager:
         isSuccess = dbMessenger.DeleteFlashcard(flashcard=targetFlashcard)
         ## Epilogue
         if isSuccess:
-            log.info(f"Deleted a flashcard. \"Key\": {targetFlashcard.Key}")
+            log.info(f"{cls._DeleteFlashcard.__name__} deleted a flashcard. \"Key\": {targetFlashcard.Key}")
+            isSuccess = userMessenger.ShowFlashcard_KeyOnly(
+                flashcard=targetFlashcard, 
+                prefix="Deleted: ")
+            if isSuccess is False:
+                log.error(f"{cls._DeleteFlashcard.__name__} failed to show the flashcard info. \"Key\": {targetFlashcard.Key}")
         else:
             log.error(f"{cls._DeleteFlashcard.__name__} failed to delete the flashcard. \"Key\": {targetFlashcard.Key}")
         return isSuccess
@@ -363,7 +374,8 @@ class FlashcardsManager:
     
     @classmethod
     def _ChangeFlashcardPriority(cls, instruction:Instruction, 
-            dbMessenger:FlashcardDatabaseMessenger
+            dbMessenger:FlashcardDatabaseMessenger,
+            userMessenger:FlashcardUserMessenger
         ) -> bool:
         ## Variables initialization
         targetFlashcard = cls._GetFlashcardFromDatabase(
@@ -381,7 +393,14 @@ class FlashcardsManager:
             return True
         targetFlashcard.Priority += change
         isSuccess = dbMessenger.ReplaceFlashcard(flashcard=targetFlashcard)
-        if isSuccess is False:
+        if isSuccess:
+            log.info(f"{cls._ChangeFlashcardPriority.__name__} changed the priority of a flashcard. \"Key\": {targetFlashcard.Key}")
+            isSuccess = userMessenger.ShowFlashcard_KeyOnly(
+                flashcard=targetFlashcard, 
+                prefix="Priority changed: ")
+            if isSuccess is False:
+                log.error(f"{cls._ChangeFlashcardPriority.__name__} failed to show the flashcard info. \"Key\": {targetFlashcard.Key}")
+        else:
             log.error(f"{cls._ChangeFlashcardPriority.__name__} failed to update flashcard's priority. \"Key\": {targetFlashcard.Key}")
         return isSuccess
     
@@ -405,6 +424,8 @@ class FlashcardsManager:
         ## Main
         answerIsCorrect = instruction.Value == targetFlashcard.Key
         targetFlashcard.Priority -= 1 if answerIsCorrect else -1
+        #### Reset the question
+        self._questionToAnswer = -1
         ## Post-processing
         #### Show answer to the question
         if answerIsCorrect:
@@ -415,17 +436,19 @@ class FlashcardsManager:
                 flashcard=targetFlashcard, prefix="*Wrong*\n\n")
         if isSuccess is False:
             log.error(f"{self._RespondToQuestion.__name__} failed to show the flashcard")
-        #### Reset the question
-        self._questionToAnswer = -1
         return True
     
     
-    def _ChangeFlashcardShowingFrequency(self, 
-            instruction:Instruction
+    def _ChangeFlashcardShowingFrequency(self, instruction:Instruction, 
+            userMessenger:FlashcardUserMessenger
         ) -> bool:
         newFrequency = TryStringToInt(s=instruction.Value)
         if isinstance(newFrequency, int):
             self.FlashcardShowingFrequency = newFrequency
+            displayText = f"New frequency: {self.FlashcardShowingFrequency}"
+            isSuccess = userMessenger.ShowCustomTexts(customTexts=displayText)
+            if isSuccess is False:
+                log.error(f"{self._ChangeFlashcardShowingFrequency.__name__} failed to show a msg to user")
             return True
         else:
             log.warning(f"{self._ChangeFlashcardShowingFrequency.__name__} did not obtain a valid frequency value")
@@ -532,6 +555,7 @@ class FlashcardsManager:
             min( abs(change), cls.HIGHEST_TIME_PRIORITY) )
         change = int(math.copysign(change_unsigned, change) )
         self._timeOfDayPriorities[timeIdx] += change
+        ## Post-processing
         if self._timeOfDayPriorities[timeIdx] > cls.HIGHEST_TIME_PRIORITY:
             _RescalePriorities()
         return True
