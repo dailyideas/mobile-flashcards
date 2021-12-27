@@ -57,39 +57,8 @@ class FlashcardUserMessenger:
             infoToShow=infoToShow)
         texts = f"{prefix}{texts}{suffix}"
         return self.ShowCustomTexts(customTexts=texts)
-    
-    
-    def ShowFlashcard_MajorFields(self, flashcard:Flashcard, 
-            prefix:str="", suffix:str=""
-        ):
-        infoToShow = [
-            Flashcard.KEY_TAG,
-            Flashcard.VALUE_TAG,
-            Flashcard.ID_TAG,
-            Flashcard.PRIORITY_TAG,
-        ]
-        if isinstance(flashcard.Remarks, str) and len(flashcard.Remarks):
-            infoToShow.append(Flashcard.REMARKS_TAG)
-        return self.ShowFlashcard(flashcard=flashcard, 
-            infoToShow=infoToShow, prefix=prefix, suffix=suffix)
-        
-        
-    def ShowFlashcard_KeyOnly(self, flashcard:Flashcard, 
-            prefix:str="", suffix:str=""
-        ):
-        infoToShow = [Flashcard.KEY_TAG]
-        return self.ShowFlashcard(flashcard=flashcard, 
-            infoToShow=infoToShow, prefix=prefix, suffix=suffix)
-        
-        
-    def ShowFlashcard_ValueOnly(self, flashcard:Flashcard, 
-            prefix:str="", suffix:str=""
-        ):
-        infoToShow = [Flashcard.VALUE_TAG]
-        return self.ShowFlashcard(flashcard=flashcard, 
-            infoToShow=infoToShow, prefix=prefix, suffix=suffix)
-        
-        
+
+
     def ShowCustomTexts(self, customTexts:str) -> bool:
         result = self._bot.send_message(text=customTexts, 
             chat_id=self._chatId,

@@ -135,11 +135,12 @@ class FlashcardsManager:
     def ShowRandomFlashcardsWithPriority(self,
             dbMessenger:FlashcardDatabaseMessenger,
             userMessenger:FlashcardUserMessenger
-        ) -> None:
+        ) -> None:    
         ## Inner functions
         def _ShowFlashcardAndReducePriority(flashcard:Flashcard) -> bool:
             ## Main
-            isSuccess = userMessenger.ShowFlashcard_MajorFields(
+            isSuccess = self.ShowFlashcard_MajorFields(
+                userMessenger=userMessenger,
                 flashcard=flashcard)
             ## Post-processing
             if isSuccess:
@@ -154,8 +155,10 @@ class FlashcardsManager:
         
         def _ShowFlashcardAsQuiz(flashcard:Flashcard) -> bool:
             ## Main
-            isSuccess = userMessenger.ShowFlashcard_ValueOnly(
-                flashcard=flashcard, prefix="What is the key of value: ")
+            isSuccess = self.ShowFlashcard_ValueOnly(
+                userMessenger=userMessenger,
+                flashcard=flashcard, 
+                prefix="What is the key of value: ")
             ## Post-processing
             if isSuccess:
                 #### Record the question being asked
@@ -279,15 +282,49 @@ class FlashcardsManager:
             self._ChangeFlashcardShowingFrequency(instruction=instruction,
                 userMessenger=userMessenger)
         elif instruction.Type == InstructionType.SHOW_FLASHCARD:
-            self._ShowFlashcard(instruction=instruction, 
+            self._ShowFlashcardToUser(instruction=instruction, 
                 dbMessenger=dbMessenger, userMessenger=userMessenger)
         elif instruction.Type == InstructionType.SHOW_INFO:
-            self._ShowInfo(dbMessenger=dbMessenger, 
+            self._ShowInfoToUser(dbMessenger=dbMessenger, 
                 userMessenger=userMessenger)
         elif instruction.Type == InstructionType.CHANGE_TIME_PRIORITY:
             self._ChangeTimePriority(instruction=instruction)
         else:
             log.warning("Found an unknown instruction")
+
+    
+    @staticmethod
+    def ShowFlashcard_MajorFields(userMessenger:FlashcardUserMessenger,
+            flashcard:Flashcard, prefix:str="", suffix:str=""
+        ):
+        infoToShow = [
+            Flashcard.KEY_TAG,
+            Flashcard.VALUE_TAG,
+            Flashcard.ID_TAG,
+            Flashcard.PRIORITY_TAG,
+        ]
+        if isinstance(flashcard.Remarks, str) and len(flashcard.Remarks):
+            infoToShow.append(Flashcard.REMARKS_TAG)
+        return userMessenger.ShowFlashcard(flashcard=flashcard, 
+            infoToShow=infoToShow, prefix=prefix, suffix=suffix)
+        
+    
+    @staticmethod
+    def ShowFlashcard_KeyOnly(userMessenger:FlashcardUserMessenger, 
+            flashcard:Flashcard, prefix:str="", suffix:str=""
+        ):
+        infoToShow = [Flashcard.KEY_TAG]
+        return userMessenger.ShowFlashcard(flashcard=flashcard, 
+            infoToShow=infoToShow, prefix=prefix, suffix=suffix)
+        
+        
+    @staticmethod
+    def ShowFlashcard_ValueOnly(userMessenger:FlashcardUserMessenger, 
+            flashcard:Flashcard, prefix:str="", suffix:str=""
+        ):
+        infoToShow = [Flashcard.VALUE_TAG]
+        return userMessenger.ShowFlashcard(flashcard=flashcard, 
+            infoToShow=infoToShow, prefix=prefix, suffix=suffix)
         
         
     @classmethod
@@ -318,7 +355,8 @@ class FlashcardsManager:
                 flashcard=existingFlashcard)
             if isSuccess:
                 log.info(f"{cls._InsertFlashcard.__name__} updated a flashcard. \"Key\": {existingFlashcard.Key}")
-                isSuccess = userMessenger.ShowFlashcard_MajorFields(
+                isSuccess = cls.ShowFlashcard_MajorFields(
+                    userMessenger=userMessenger,
                     flashcard=existingFlashcard, 
                     prefix="Updated existing:\n")
                 if isSuccess is False:
@@ -335,7 +373,8 @@ class FlashcardsManager:
             isSuccess = dbMessenger.InsertFlashcard(flashcard=newFlashcard)
             if isSuccess:
                 log.info(f"{cls._InsertFlashcard.__name__} inserted a flashcard. \"Key\": {newFlashcard.Key}")
-                isSuccess = userMessenger.ShowFlashcard_MajorFields(
+                isSuccess = cls.ShowFlashcard_MajorFields(
+                    userMessenger=userMessenger,
                     flashcard=newFlashcard, 
                     prefix="Inserted new:\n")
                 if isSuccess is False:
@@ -362,7 +401,8 @@ class FlashcardsManager:
         ## Epilogue
         if isSuccess:
             log.info(f"{cls._DeleteFlashcard.__name__} deleted a flashcard. \"Key\": {targetFlashcard.Key}")
-            isSuccess = userMessenger.ShowFlashcard_KeyOnly(
+            isSuccess = cls.ShowFlashcard_KeyOnly(
+                userMessenger=userMessenger,
                 flashcard=targetFlashcard, 
                 prefix="Deleted: ")
             if isSuccess is False:
@@ -395,7 +435,8 @@ class FlashcardsManager:
         isSuccess = dbMessenger.ReplaceFlashcard(flashcard=targetFlashcard)
         if isSuccess:
             log.info(f"{cls._ChangeFlashcardPriority.__name__} changed the priority of a flashcard. \"Key\": {targetFlashcard.Key}")
-            isSuccess = userMessenger.ShowFlashcard_KeyOnly(
+            isSuccess = cls.ShowFlashcard_KeyOnly(
+                userMessenger=userMessenger,
                 flashcard=targetFlashcard, 
                 prefix="Priority changed: ")
             if isSuccess is False:
@@ -429,11 +470,15 @@ class FlashcardsManager:
         ## Post-processing
         #### Show answer to the question
         if answerIsCorrect:
-            isSuccess = userMessenger.ShowFlashcard_MajorFields(
-                flashcard=targetFlashcard, prefix="*Correct*\n\n")
+            isSuccess = self.ShowFlashcard_MajorFields(
+                userMessenger=userMessenger,
+                flashcard=targetFlashcard, 
+                prefix="*Correct*\n\n")
         else:
-            isSuccess = userMessenger.ShowFlashcard_MajorFields(
-                flashcard=targetFlashcard, prefix="*Wrong*\n\n")
+            isSuccess = self.ShowFlashcard_MajorFields(
+                userMessenger=userMessenger,
+                flashcard=targetFlashcard, 
+                prefix="*Wrong*\n\n")
         if isSuccess is False:
             log.error(f"{self._RespondToQuestion.__name__} failed to show the flashcard")
         return True
@@ -455,7 +500,7 @@ class FlashcardsManager:
             return False
     
     
-    def _ShowFlashcard(self, instruction:Instruction, 
+    def _ShowFlashcardToUser(self, instruction:Instruction, 
             dbMessenger:FlashcardDatabaseMessenger, 
             userMessenger:FlashcardUserMessenger
         ) -> bool:
@@ -464,17 +509,18 @@ class FlashcardsManager:
             instruction=instruction, dbMessenger=dbMessenger)
         ## Pre-condition
         if targetFlashcard is None:
-            log.warning(f"{self._ShowFlashcard.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
+            log.warning(f"{self._ShowFlashcardToUser.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
             return False
         ## Main
-        isSuccess = userMessenger.ShowFlashcard_MajorFields(
+        isSuccess = self.ShowFlashcard_MajorFields(
+            userMessenger=userMessenger,
             flashcard=targetFlashcard)
         if isSuccess is False:
-            log.error(f"{self._ShowFlashcard.__name__} failed to show flashcard. \"Key\": {targetFlashcard.Key}")
+            log.error(f"{self._ShowFlashcardToUser.__name__} failed to show flashcard. \"Key\": {targetFlashcard.Key}")
         return isSuccess
     
     
-    def _ShowInfo(self, dbMessenger:FlashcardDatabaseMessenger, 
+    def _ShowInfoToUser(self, dbMessenger:FlashcardDatabaseMessenger, 
             userMessenger:FlashcardUserMessenger
         ) -> bool:
         ## Inner function
@@ -519,7 +565,7 @@ class FlashcardsManager:
         )
         isSuccess = userMessenger.ShowCustomTexts(customTexts=texts)
         if isSuccess is False:
-            log.error(f"{self._ShowInfo.__name__} failed to show flashcard system info")
+            log.error(f"{self._ShowInfoToUser.__name__} failed to show flashcard system info")
         return isSuccess
     
     
