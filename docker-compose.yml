@@ -1,7 +1,7 @@
 version: "3.1"
 services:
     database:
-        container_name: database
+        container_name: flashcard-database
         restart: always
         image: mongo:4.2.6-bionic
         environment:
@@ -18,9 +18,9 @@ services:
         deploy:
             resources:
                 limits:
-                    cpus: 2
+                    cpus: 1
                     memory: 512M
-    flashcard-worker:
+    worker:
         container_name: flashcard-worker
         restart: always
         build: 
