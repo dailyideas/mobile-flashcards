@@ -53,21 +53,21 @@ class FlashcardUserMessenger:
         ## Variables initialization
         cls = type(self)
         ## Main
-        texts = cls._FlashcardToString(flashcard=flashcard, 
+        text = cls._FlashcardToString(flashcard=flashcard, 
             infoToShow=infoToShow)
-        texts = f"{prefix}{texts}{suffix}"
-        return self.ShowCustomTexts(customTexts=texts)
+        text = f"{prefix}{text}{suffix}"
+        return self.ShowCustomText(text=text)
 
 
-    def ShowCustomTexts(self, customTexts:str) -> bool:
-        result = self._bot.send_message(text=customTexts, 
+    def ShowCustomText(self, text:str) -> bool:
+        result = self._bot.send_message(text=text, 
             chat_id=self._chatId,
             parse_mode=telegram.constants.PARSEMODE_MARKDOWN_V2,
             disable_notification=True, timeout=10)
         return isinstance(result, telegram.Message)
         
         
-    def GetUserInstructions(self, latestUpdateId:int=None) -> list:
+    def GetUserInstructions(self, latestInstructionId:int=None) -> list:
         ## Inner functions
         def _GetInstruction(update:telegram.Update) -> Instruction:
             ## Variables intialization
@@ -96,10 +96,10 @@ class FlashcardUserMessenger:
             return instruction
         
         ## Main
-        if latestUpdateId is None:
+        if latestInstructionId is None:
             updates = self._bot.get_updates(timeout=2.)
         else:
-            nextUpdateId = latestUpdateId + 1
+            nextUpdateId = latestInstructionId + 1
             updates = self._bot.get_updates(offset=nextUpdateId, timeout=2.)
         instructions = []
         for update in updates:

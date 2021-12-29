@@ -54,8 +54,8 @@ class FlashcardsManager:
         cls = type(self)
         ## Main
         self._numJobsPerHour = numJobsPerHour
-        self._lastUpdateDatetime = None
-        self._bot_latestUpdateId = None ## int
+        self._lastUpdateDatetime = None ## datetime.datetime: Renewed whenever "ShowRandomFlashcardsWithPriority" is called
+        self._latestInstructionId = None ## int: 
         self._questionToAnswer = -1
         self._questionAskedDatetime = datetime.datetime.now()
         self._dailyFlashcardShowingFrequency = 10
@@ -116,7 +116,7 @@ class FlashcardsManager:
     def Load(cls, cachePath:str) -> FlashcardsManager:
         ## Pre-condition
         if not path.isfile(cachePath):
-            log.warning(f"{cls.__name__}.Load cannot find the cache \"{cachePath}\"")
+            log.warning(f"{cls.Load.__name__} could not find the cache \"{cachePath}\"")
             return None
         ## Main
         payload = None
@@ -134,15 +134,16 @@ class FlashcardsManager:
             dbMessenger:FlashcardDatabaseMessenger,
             userMessenger:FlashcardUserMessenger
         ) -> None:
+        ## Main
         instructions = userMessenger.GetUserInstructions(
-            latestUpdateId=self._bot_latestUpdateId)
+            latestInstructionId=self._latestInstructionId)
         for instruction in instructions:
             self._HandleInstruction(instruction=instruction, 
                 dbMessenger=dbMessenger, userMessenger=userMessenger)
         ## Post-processing
         if len(instructions):
-            #### Store latest update_id for next telegram.Bot.get_updates
-            self._bot_latestUpdateId = instructions[-1].Id
+            #### Store latest instruction id for next FlashcardUserMessenger.GetUserInstructions
+            self._latestInstructionId = instructions[-1].Id
             #### Possible increase of priority at current hour
             currentHour = datetime.datetime.now().hour
             priorityChange = FlipBiasedCoin(pOf1=0.6)
@@ -153,7 +154,7 @@ class FlashcardsManager:
     def ShowRandomFlashcardsWithPriority(self,
             dbMessenger:FlashcardDatabaseMessenger,
             userMessenger:FlashcardUserMessenger
-        ) -> None:    
+        ) -> None:
         ## Inner functions
         def _ShowFlashcardAndReducePriority(flashcard:Flashcard) -> bool:
             ## Main
@@ -169,7 +170,7 @@ class FlashcardsManager:
                 if isSuccess is False:
                     log.error(f"{_ShowFlashcardAndReducePriority.__name__} found {dbMessenger.ReplaceFlashcard} failed")
             else:
-                log.warning(f"{_ShowFlashcardAndReducePriority.__name__} failed to show flashcard \"{flashcard.Key}\" to user")
+                log.error(f"{_ShowFlashcardAndReducePriority.__name__} failed to show flashcard \"{flashcard.Key}\" to user")
             return isSuccess
         
         def _ShowFlashcardAsQuiz(flashcard:Flashcard) -> bool:
@@ -185,7 +186,7 @@ class FlashcardsManager:
                 self._questionToAnswer = flashcard.Id
                 self._questionAskedDatetime = datetime.datetime.now()
             else:
-                log.warning(f"{_ShowFlashcardAndReducePriority.__name__} failed to show flashcard \"{flashcard.Key}\" to user")
+                log.error(f"{_ShowFlashcardAndReducePriority.__name__} failed to show flashcard \"{flashcard.Key}\" to user")
             return isSuccess
         
         ## Pre-processing
@@ -204,21 +205,17 @@ class FlashcardsManager:
         if numCardsToShow > 0 and len(flashcards) == 0:
             log.warning(f"{self.ShowRandomFlashcardsWithPriority.__name__} found no valid flashcard to be shown")
             return
-        showedFlashcardsId = []
         for flashcard in flashcards:
-            ## Pre-condition
-            if flashcard.Id in showedFlashcardsId:
-                continue
-            ## Main
             _ShowFlashcardAndReducePriority(flashcard=flashcard)
-            ## Post-processing
-            showedFlashcardsId.append(flashcard.Id)
 
 
     def _GenerateTimeOfDayShowFlashcardsDistribution(self) -> np.ndarray:
+        ## Main
+        #### Get weighting of each time session
         timeOfDayPrioritiesSum = np.sum(self._timeOfDayPriorities)
         timeOfDayProbabilities = [i / timeOfDayPrioritiesSum for i in \
             self._timeOfDayPriorities]
+        #### Get the distribution of the number of flashcards to be shown at each time session
         showFlashcardMoments = np.random.choice(HOURS_IN_DAY, 
             self._dailyFlashcardShowingFrequency, replace=True, 
             p=timeOfDayProbabilities)
@@ -226,14 +223,17 @@ class FlashcardsManager:
         for i in showFlashcardMoments:
             showFlashcardsDistribution[i] += 1
         ## Epilogue
-        log.info(f"TimeOfDayShowFlashcardsDistribution: {showFlashcardsDistribution.tolist() }")
+        log.info(f"{self._GenerateTimeOfDayShowFlashcardsDistribution-__name__} generated: {showFlashcardsDistribution.tolist() }")
         return showFlashcardsDistribution
 
 
     def _GenerateWithinHourShowFlashcardsDistribution(self) -> np.ndarray:
+        ## Main
+        #### Get the number of flashcards to be shown at current hour
         currentHour = datetime.datetime.now().hour
         flashcardsToShow = \
             self._timeOfDayShowFlashcardsDistribution[currentHour]
+        #### Get the distribution of the number of flashcards to be shown at each time session
         showFlashcardMoments = np.random.choice(self._numJobsPerHour, flashcardsToShow, 
             replace=True)
         showFlashcardsDistribution = np.zeros( (self._numJobsPerHour,), dtype=int)
@@ -242,29 +242,33 @@ class FlashcardsManager:
         ## Epilogue
         log.info(f"WithinHourShowFlashcardsDistribution: {showFlashcardsDistribution.tolist() }")
         return showFlashcardsDistribution
-        
-        
+
+
     def _UpdateMetadata(self) -> None:
         currentDatetime = datetime.datetime.now()
+        #### Update timeOfDayShowFlashcardsDistribution at the start of a day
         if self._lastUpdateDatetime.date() != currentDatetime.date():
             self._timeOfDayShowFlashcardsDistribution = \
                 self._GenerateTimeOfDayShowFlashcardsDistribution()
+        #### Update withinHourShowFlashcardsDistribution at the start of an hour
         if self._lastUpdateDatetime.hour != currentDatetime.hour:
             self._withinHourShowFlashcardsDistribution = \
                 self._GenerateWithinHourShowFlashcardsDistribution()
+        #### Reset the question to be asked if the question is not answered after a day
         if self._questionToAnswer != -1:
             daysPassedFromLastQuestion = \
                 (currentDatetime - self._questionAskedDatetime).days
             if daysPassedFromLastQuestion >= 1:
                 self._questionToAnswer = -1
+        #### Renew the lastUpdateDatetime
         self._lastUpdateDatetime = currentDatetime
-        
-        
+
+
     @classmethod
     def _DisplayCustomTextToUser(cls, userMessenger:FlashcardUserMessenger, 
             text:str
         ) -> bool:
-        isSuccess = userMessenger.ShowCustomTexts(customTexts=text)
+        isSuccess = userMessenger.ShowCustomText(text=text)
         if isSuccess is False:
             log.error(f"{cls._DisplayCustomTextToUser.__name__} failed to show custom text to user")
         return isSuccess
@@ -346,6 +350,10 @@ class FlashcardsManager:
                     prefix="Updated existing:\n")
                 log.info(f"{cls._InsertFlashcard.__name__} updated a flashcard. \"Key\": {existingFlashcard.Key}")
             else:
+                cls.ShowFlashcard_KeyOnly(
+                    userMessenger=userMessenger,
+                    flashcard=existingFlashcard, 
+                    prefix="Unexpected error occurred when updating: ")
                 log.error(f"{cls._InsertFlashcard.__name__} found {dbMessenger.ReplaceFlashcard} failed. \"Key\": {existingFlashcard.Key}")
         else:
             newFlashcard = Flashcard(
@@ -362,7 +370,11 @@ class FlashcardsManager:
                     prefix="Inserted new:\n")
                 log.info(f"{cls._InsertFlashcard.__name__} inserted a flashcard. \"Key\": {newFlashcard.Key}")
             else:
-                log.warning(f"{cls._InsertFlashcard.__name__} found {dbMessenger.InsertFlashcard} failed. \"Key\": {newFlashcard.Key}")
+                cls.ShowFlashcard_KeyOnly(
+                    userMessenger=userMessenger,
+                    flashcard=newFlashcard, 
+                    prefix="Unexpected error occurred when inserting: ")
+                log.error(f"{cls._InsertFlashcard.__name__} found {dbMessenger.InsertFlashcard} failed. \"Key\": {newFlashcard.Key}")
         return isSuccess
 
 
@@ -391,7 +403,11 @@ class FlashcardsManager:
                 prefix="Deleted: ")
             log.info(f"{cls._DeleteFlashcard.__name__} deleted a flashcard. \"Key\": {targetFlashcard.Key}")
         else:
-            log.warning(f"{cls._DeleteFlashcard.__name__} found {dbMessenger.DeleteFlashcard} failed. \"Key\": {targetFlashcard.Key}")
+            cls.ShowFlashcard_KeyOnly(
+                userMessenger=userMessenger,
+                flashcard=targetFlashcard, 
+                prefix="Unexpected error occurred when deleting: ")
+            log.error(f"{cls._DeleteFlashcard.__name__} found {dbMessenger.DeleteFlashcard} failed. \"Key\": {targetFlashcard.Key}")
         return isSuccess
     
     
@@ -434,6 +450,9 @@ class FlashcardsManager:
                 prefix="Priority changed: ")
             log.info(f"{cls._ChangeFlashcardPriority.__name__} changed the priority of flashcard. \"Key\": {targetFlashcard.Key}")
         else:
+            cls.ShowFlashcard_KeyOnly(
+                userMessenger=userMessenger,
+                text="Unexpected error occurred when changing the priority of: ")
             log.error(f"{cls._ChangeFlashcardPriority.__name__} failed to change flashcard's priority. \"Key\": {targetFlashcard.Key}")
         return isSuccess
     
@@ -524,7 +543,7 @@ class FlashcardsManager:
         if isSuccess:
             log.info(f"{self._ShowFlashcardToUser.__name__} showed a flashcard to user: \"Key\": {targetFlashcard.Key}")
         else:
-            log.warning(f"{self._ShowFlashcardToUser.__name__} failed in showing a flashcard to user")
+            log.error(f"{self._ShowFlashcardToUser.__name__} failed in showing a flashcard to user")
         return isSuccess
     
     
@@ -561,7 +580,7 @@ class FlashcardsManager:
                 arr=self._withinHourShowFlashcardsDistribution,
                 numElementsPerLine=6)
         flashcardCount = dbMessenger.FlashcardCount()
-        texts = (
+        text = (
             f"*Last update*: {lastUpdateDatetime_str}\n"
             f"*Flashcard showing freq*: {self._dailyFlashcardShowingFrequency}\n"
             f"*Time of day priorities*:\n{timeOfDayPriorities_str}\n"
@@ -572,7 +591,7 @@ class FlashcardsManager:
             f"{withinHourShowFlashcardsDistribution_str}\n"
             f"*Flashcard count*: {flashcardCount}"
         )
-        isSuccess = userMessenger.ShowCustomTexts(customTexts=texts)
+        isSuccess = userMessenger.ShowCustomText(text=text)
         if isSuccess:
             log.info(f"{self._ShowInfoToUser.__name__} showed flashcard system information to user")
         else:
@@ -593,6 +612,7 @@ class FlashcardsManager:
             newPriorities_float = self._timeOfDayPriorities / maxPriority * \
                 cls.HIGHEST_TIME_PRIORITY
             self._timeOfDayPriorities = newPriorities_float.astype(int)
+            log.info(f"{self._ChangeTimePriority.__name__} has rescaled the time priorities")
         
         ## Variables initialization
         if isinstance(instruction, Instruction):
@@ -612,19 +632,21 @@ class FlashcardsManager:
                 self._DisplayCustomTextToUser(
                     userMessenger=userMessenger,
                     text="Cannot obtain an integer for time priority change")
-            log.warning(f"{self._ChangeTimePriority.__name__} could not obtain a valid value for the change. \"Value\": {instruction.Value}")
+            log.warning(f"{self._ChangeTimePriority.__name__} could not obtain an integer for time priority change. \"Value\": {instruction.Value}")
             return False
         if change == 0:
             if isinstance(userMessenger, FlashcardUserMessenger):
                 self._DisplayCustomTextToUser(
                     userMessenger=userMessenger,
                     text="Time priority is unchanged")
+            log.info(f"{self._ChangeTimePriority.__name__} found the change to be 0")
             return True
         ## Main
         change_unsigned = max(cls.LOWEST_TIME_PRIORITY, 
             min( abs(change), cls.HIGHEST_TIME_PRIORITY) )
         change = int(math.copysign(change_unsigned, change) )
         self._timeOfDayPriorities[timeIdx] += change
+        log.info(f"{self._ChangeTimePriority.__name__} changed the priority at index \"{timeIdx}\" to {self._timeOfDayPriorities[timeIdx] }")
         ## Post-processing
         if self._timeOfDayPriorities[timeIdx] > cls.HIGHEST_TIME_PRIORITY:
             _RescalePriorities()

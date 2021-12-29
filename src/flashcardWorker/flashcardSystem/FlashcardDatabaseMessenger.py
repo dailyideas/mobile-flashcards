@@ -116,6 +116,17 @@ class FlashcardDatabaseMessenger:
         ## Main
         flashcards = cls._GetFlashcardsFromDatabaseDocuments(
             docCursor=docCursor)
+        ## Post-processing
+        #### Remove duplicated flashcards
+        unique_flashcards = []
+        visited = set()
+        for flashcard in flashcards:
+            flashcard_id = flashcard.Id
+            if not flashcard_id in visited:
+                unique_flashcards.append(flashcard)
+                visited.add(flashcard_id)
+        flashcards = unique_flashcards
+        ## Return
         return flashcards
     
     
