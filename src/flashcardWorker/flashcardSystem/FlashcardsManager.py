@@ -223,7 +223,7 @@ class FlashcardsManager:
         for i in showFlashcardMoments:
             showFlashcardsDistribution[i] += 1
         ## Epilogue
-        log.info(f"{self._GenerateTimeOfDayShowFlashcardsDistribution-__name__} generated: {showFlashcardsDistribution.tolist() }")
+        log.info(f"{self._GenerateTimeOfDayShowFlashcardsDistribution.__name__} generated: {showFlashcardsDistribution.tolist() }")
         return showFlashcardsDistribution
 
 
