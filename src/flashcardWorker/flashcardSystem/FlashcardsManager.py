@@ -110,6 +110,24 @@ class FlashcardsManager:
             pickle.dump(self, fhandler)
         ## Epilogue
         log.info(f"Stored a {cls.__name__} at {cachePath}")
+        
+        
+    @classmethod
+    def Load(cls, cachePath:str) -> FlashcardsManager:
+        ## Pre-condition
+        if not path.isfile(cachePath):
+            log.warning(f"{cls.__name__}.Load cannot find the cache \"{cachePath}\"")
+            return None
+        ## Main
+        payload = None
+        with open(cachePath, "rb") as fhandler:
+            payload = pickle.load(fhandler)
+        if not isinstance(payload, cls):
+            log.error(f"Instance loaded from \"{cachePath}\" is not an \"{cls.__name__}\"")
+            return None
+        ## Epilogue
+        log.info(f"Loaded a {cls.__name__} instance from \"{cachePath}\"")
+        return payload
 
 
     def ProcessUserInstructions(self, 
@@ -130,8 +148,8 @@ class FlashcardsManager:
             priorityChange = FlipBiasedCoin(pOf1=0.6)
             self._ChangeTimePriority(timeIdx=currentHour, 
                 change=priorityChange)
-
-
+            
+            
     def ShowRandomFlashcardsWithPriority(self,
             dbMessenger:FlashcardDatabaseMessenger,
             userMessenger:FlashcardUserMessenger
@@ -144,13 +162,14 @@ class FlashcardsManager:
                 flashcard=flashcard)
             ## Post-processing
             if isSuccess:
+                log.info(f"{_ShowFlashcardAndReducePriority.__name__} showed flashcard \"{flashcard.Key}\" to user")
                 #### Update the priority of the flashcard
                 flashcard.Priority -= 1
                 isSuccess = dbMessenger.ReplaceFlashcard(flashcard=flashcard)
                 if isSuccess is False:
-                    log.error(f"{_ShowFlashcardAndReducePriority.__name__} failed to replace flashcard. \"Id\": {flashcard.Id}")
+                    log.error(f"{_ShowFlashcardAndReducePriority.__name__} found {dbMessenger.ReplaceFlashcard} failed")
             else:
-                log.error(f"{_ShowFlashcardAndReducePriority.__name__} failed to show flashcard. \"Id\": {flashcard.Id}")
+                log.warning(f"{_ShowFlashcardAndReducePriority.__name__} failed to show flashcard \"{flashcard.Key}\" to user")
             return isSuccess
         
         def _ShowFlashcardAsQuiz(flashcard:Flashcard) -> bool:
@@ -161,11 +180,12 @@ class FlashcardsManager:
                 prefix="What is the key of value: ")
             ## Post-processing
             if isSuccess:
+                log.info(f"{_ShowFlashcardAndReducePriority.__name__} showed flashcard \"{flashcard.Key}\" to user, as quiz")
                 #### Record the question being asked
                 self._questionToAnswer = flashcard.Id
                 self._questionAskedDatetime = datetime.datetime.now()
             else:
-                log.error(f"{_ShowFlashcardAsQuiz.__name__} failed to show flashcard. \"Id\": {flashcard.Id}")
+                log.warning(f"{_ShowFlashcardAndReducePriority.__name__} failed to show flashcard \"{flashcard.Key}\" to user")
             return isSuccess
         
         ## Pre-processing
@@ -182,10 +202,7 @@ class FlashcardsManager:
             size=numCardsToShow, minPriority=minPriority,
             maxTimestamp=maxTimestamp)
         if numCardsToShow > 0 and len(flashcards) == 0:
-            log.warning( (
-                f"ShowRandomFlashcardsWithPriority failed to obtain any flashcard. "
-                f"\"numCardsToShow\"={numCardsToShow}, \"minPriority\"={minPriority}, \"maxTimestamp\"={maxTimestamp}"
-            ) )
+            log.warning(f"{self.ShowRandomFlashcardsWithPriority.__name__} found no valid flashcard to be shown")
             return
         showedFlashcardsId = []
         for flashcard in flashcards:
@@ -196,24 +213,6 @@ class FlashcardsManager:
             _ShowFlashcardAndReducePriority(flashcard=flashcard)
             ## Post-processing
             showedFlashcardsId.append(flashcard.Id)
-
-
-    @classmethod
-    def Load(cls, cachePath:str) -> FlashcardsManager:
-        ## Pre-condition
-        if not path.isfile(cachePath):
-            log.warning(f"{cls.__name__}.Load cannot find the cache \"{cachePath}\"")
-            return None
-        ## Main
-        payload = None
-        with open(cachePath, "rb") as fhandler:
-            payload = pickle.load(fhandler)
-        if not isinstance(payload, cls):
-            log.error(f"Instance loaded from \"{cachePath}\" is not an \"{cls.__name__}\"")
-            return None
-        ## Epilogue
-        log.info(f"Loaded a {cls.__name__} instance from \"{cachePath}\"")
-        return payload
 
 
     def _GenerateTimeOfDayShowFlashcardsDistribution(self) -> np.ndarray:
@@ -259,44 +258,22 @@ class FlashcardsManager:
             if daysPassedFromLastQuestion >= 1:
                 self._questionToAnswer = -1
         self._lastUpdateDatetime = currentDatetime
+        
+        
+    @classmethod
+    def _DisplayCustomTextToUser(cls, userMessenger:FlashcardUserMessenger, 
+            text:str
+        ) -> bool:
+        isSuccess = userMessenger.ShowCustomTexts(customTexts=text)
+        if isSuccess is False:
+            log.error(f"{cls._DisplayCustomTextToUser.__name__} failed to show custom text to user")
+        return isSuccess
 
 
-    def _HandleInstruction(self, instruction:Instruction, 
-            dbMessenger:FlashcardDatabaseMessenger,
-            userMessenger:FlashcardUserMessenger
-        ) -> None:
-        if instruction.Type == InstructionType.ADD:
-            self._InsertFlashcard(instruction=instruction, 
-                dbMessenger=dbMessenger, userMessenger=userMessenger)
-        elif instruction.Type == InstructionType.DELETE:
-            self._DeleteFlashcard(instruction=instruction, 
-                dbMessenger=dbMessenger, userMessenger=userMessenger)
-        elif instruction.Type == InstructionType.CHANGE_FLASHCARD_PRIORITY:
-            self._ChangeFlashcardPriority(instruction=instruction, 
-                dbMessenger=dbMessenger, userMessenger=userMessenger)
-        elif instruction.Type == InstructionType.RESPOND_TO_QUESTION:
-            self._RespondToQuestion(instruction=instruction, 
-                dbMessenger=dbMessenger, userMessenger=userMessenger)
-        elif instruction.Type == \
-            InstructionType.CHANGE_FLASHCARD_SHOWING_FREQUENCY:
-            self._ChangeFlashcardShowingFrequency(instruction=instruction,
-                userMessenger=userMessenger)
-        elif instruction.Type == InstructionType.SHOW_FLASHCARD:
-            self._ShowFlashcardToUser(instruction=instruction, 
-                dbMessenger=dbMessenger, userMessenger=userMessenger)
-        elif instruction.Type == InstructionType.SHOW_INFO:
-            self._ShowInfoToUser(dbMessenger=dbMessenger, 
-                userMessenger=userMessenger)
-        elif instruction.Type == InstructionType.CHANGE_TIME_PRIORITY:
-            self._ChangeTimePriority(instruction=instruction)
-        else:
-            log.warning("Found an unknown instruction")
-
-    
-    @staticmethod
-    def ShowFlashcard_MajorFields(userMessenger:FlashcardUserMessenger,
+    @classmethod
+    def ShowFlashcard_MajorFields(cls, userMessenger:FlashcardUserMessenger,
             flashcard:Flashcard, prefix:str="", suffix:str=""
-        ):
+        ) -> bool:
         infoToShow = [
             Flashcard.KEY_TAG,
             Flashcard.VALUE_TAG,
@@ -305,26 +282,35 @@ class FlashcardsManager:
         ]
         if isinstance(flashcard.Remarks, str) and len(flashcard.Remarks):
             infoToShow.append(Flashcard.REMARKS_TAG)
-        return userMessenger.ShowFlashcard(flashcard=flashcard, 
+        isSuccess = userMessenger.ShowFlashcard(flashcard=flashcard, 
             infoToShow=infoToShow, prefix=prefix, suffix=suffix)
-        
-    
-    @staticmethod
-    def ShowFlashcard_KeyOnly(userMessenger:FlashcardUserMessenger, 
+        if isSuccess is False:
+            log.error(f"{cls.ShowFlashcard_MajorFields.__name__} found {userMessenger.ShowFlashcard.__name__} failed")
+        return isSuccess
+
+
+    @classmethod
+    def ShowFlashcard_KeyOnly(cls, userMessenger:FlashcardUserMessenger, 
             flashcard:Flashcard, prefix:str="", suffix:str=""
-        ):
+        ) -> bool:
         infoToShow = [Flashcard.KEY_TAG]
-        return userMessenger.ShowFlashcard(flashcard=flashcard, 
+        isSuccess = userMessenger.ShowFlashcard(flashcard=flashcard, 
             infoToShow=infoToShow, prefix=prefix, suffix=suffix)
+        if isSuccess is False:
+            log.error(f"{cls.ShowFlashcard_KeyOnly.__name__} found {userMessenger.ShowFlashcard.__name__} failed")
+        return isSuccess
         
         
-    @staticmethod
-    def ShowFlashcard_ValueOnly(userMessenger:FlashcardUserMessenger, 
+    @classmethod
+    def ShowFlashcard_ValueOnly(cls, userMessenger:FlashcardUserMessenger, 
             flashcard:Flashcard, prefix:str="", suffix:str=""
-        ):
+        ) -> bool:
         infoToShow = [Flashcard.VALUE_TAG]
-        return userMessenger.ShowFlashcard(flashcard=flashcard, 
+        isSuccess = userMessenger.ShowFlashcard(flashcard=flashcard, 
             infoToShow=infoToShow, prefix=prefix, suffix=suffix)
+        if isSuccess is False:
+            log.error(f"{cls.ShowFlashcard_ValueOnly.__name__} found {userMessenger.ShowFlashcard.__name__} failed")
+        return isSuccess
         
         
     @classmethod
@@ -354,15 +340,13 @@ class FlashcardsManager:
             isSuccess = dbMessenger.ReplaceFlashcard(
                 flashcard=existingFlashcard)
             if isSuccess:
-                log.info(f"{cls._InsertFlashcard.__name__} updated a flashcard. \"Key\": {existingFlashcard.Key}")
-                isSuccess = cls.ShowFlashcard_MajorFields(
+                cls.ShowFlashcard_MajorFields(
                     userMessenger=userMessenger,
                     flashcard=existingFlashcard, 
                     prefix="Updated existing:\n")
-                if isSuccess is False:
-                    log.error(f"{cls._InsertFlashcard.__name__} failed to show the flashcard")
+                log.info(f"{cls._InsertFlashcard.__name__} updated a flashcard. \"Key\": {existingFlashcard.Key}")
             else:
-                log.error(f"{cls._InsertFlashcard.__name__} failed to replace an existing flashcard. \"Key\": {existingFlashcard.Key}")
+                log.error(f"{cls._InsertFlashcard.__name__} found {dbMessenger.ReplaceFlashcard} failed. \"Key\": {existingFlashcard.Key}")
         else:
             newFlashcard = Flashcard(
                 Key=instruction.Key,
@@ -372,15 +356,13 @@ class FlashcardsManager:
             )
             isSuccess = dbMessenger.InsertFlashcard(flashcard=newFlashcard)
             if isSuccess:
-                log.info(f"{cls._InsertFlashcard.__name__} inserted a flashcard. \"Key\": {newFlashcard.Key}")
-                isSuccess = cls.ShowFlashcard_MajorFields(
+                cls.ShowFlashcard_MajorFields(
                     userMessenger=userMessenger,
                     flashcard=newFlashcard, 
                     prefix="Inserted new:\n")
-                if isSuccess is False:
-                    log.error(f"{cls._InsertFlashcard.__name__} failed to show the flashcard. \"Key\": {newFlashcard.Key}")
+                log.info(f"{cls._InsertFlashcard.__name__} inserted a flashcard. \"Key\": {newFlashcard.Key}")
             else:
-                log.error(f"{cls._InsertFlashcard.__name__} failed to insert flashcard. \"Key\": {newFlashcard.Key}")
+                log.warning(f"{cls._InsertFlashcard.__name__} found {dbMessenger.InsertFlashcard} failed. \"Key\": {newFlashcard.Key}")
         return isSuccess
 
 
@@ -394,21 +376,22 @@ class FlashcardsManager:
             instruction=instruction, dbMessenger=dbMessenger)
         ## Pre-condition
         if targetFlashcard is None:
-            log.warning(f"{cls._DeleteFlashcard.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
+            cls._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Cannot find the flashcard to delete")
+            log.warning(f"{cls._DeleteFlashcard.__name__} could not find the flashcard to delete. \"Key\": {instruction.Key}")
             return False
         ## Main
         isSuccess = dbMessenger.DeleteFlashcard(flashcard=targetFlashcard)
         ## Epilogue
         if isSuccess:
-            log.info(f"{cls._DeleteFlashcard.__name__} deleted a flashcard. \"Key\": {targetFlashcard.Key}")
-            isSuccess = cls.ShowFlashcard_KeyOnly(
+            cls.ShowFlashcard_KeyOnly(
                 userMessenger=userMessenger,
                 flashcard=targetFlashcard, 
                 prefix="Deleted: ")
-            if isSuccess is False:
-                log.error(f"{cls._DeleteFlashcard.__name__} failed to show the flashcard info. \"Key\": {targetFlashcard.Key}")
+            log.info(f"{cls._DeleteFlashcard.__name__} deleted a flashcard. \"Key\": {targetFlashcard.Key}")
         else:
-            log.error(f"{cls._DeleteFlashcard.__name__} failed to delete the flashcard. \"Key\": {targetFlashcard.Key}")
+            log.warning(f"{cls._DeleteFlashcard.__name__} found {dbMessenger.DeleteFlashcard} failed. \"Key\": {targetFlashcard.Key}")
         return isSuccess
     
     
@@ -420,29 +403,38 @@ class FlashcardsManager:
         ## Variables initialization
         targetFlashcard = cls._GetFlashcardFromDatabase(
             instruction=instruction, dbMessenger=dbMessenger)
+        change = TryStringToInt(instruction.Value)
         ## Pre-condition
         if targetFlashcard is None:
+            cls._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Cannot find the flashcard for priority change")
             log.warning(f"{cls._ChangeFlashcardPriority.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
             return False
-        ## Main
-        change = TryStringToInt(instruction.Value)
         if not isinstance(change, int):
+            cls._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Cannot obtain an integer for priority change")
             log.warning(f"{cls._ChangeFlashcardPriority.__name__} could not obtain an integer for priority change. \"Value\": {instruction.Value}")
             return False
+        ## Main
+        #### Early escape
         if change == 0:
+            cls._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Flashcard priority is unchanged")
             return True
+        #### Normal track
         targetFlashcard.Priority += change
         isSuccess = dbMessenger.ReplaceFlashcard(flashcard=targetFlashcard)
         if isSuccess:
-            log.info(f"{cls._ChangeFlashcardPriority.__name__} changed the priority of a flashcard. \"Key\": {targetFlashcard.Key}")
-            isSuccess = cls.ShowFlashcard_KeyOnly(
+            cls.ShowFlashcard_KeyOnly(
                 userMessenger=userMessenger,
                 flashcard=targetFlashcard, 
                 prefix="Priority changed: ")
-            if isSuccess is False:
-                log.error(f"{cls._ChangeFlashcardPriority.__name__} failed to show the flashcard info. \"Key\": {targetFlashcard.Key}")
+            log.info(f"{cls._ChangeFlashcardPriority.__name__} changed the priority of flashcard. \"Key\": {targetFlashcard.Key}")
         else:
-            log.error(f"{cls._ChangeFlashcardPriority.__name__} failed to update flashcard's priority. \"Key\": {targetFlashcard.Key}")
+            log.error(f"{cls._ChangeFlashcardPriority.__name__} failed to change flashcard's priority. \"Key\": {targetFlashcard.Key}")
         return isSuccess
     
     
@@ -450,8 +442,13 @@ class FlashcardsManager:
             dbMessenger:FlashcardDatabaseMessenger,
             userMessenger:FlashcardUserMessenger
         ) -> bool:
+        """ Under construction
+        """
         ## Pre-condition
         if self._questionToAnswer == -1:
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="There is no question to be answered")
             log.warning(f"{self._RespondToQuestion.__name__} found no question to be answered")
             return False
         ## Variables initialization
@@ -459,6 +456,9 @@ class FlashcardsManager:
             id=self._questionToAnswer)
         ## Pre-condition
         if targetFlashcard is None:
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Cannot find the flashcard for the quiz (Maybe it is deleted)")
             log.warning(f"{self._RespondToQuestion.__name__} could not find the target flashcard. \"Id\": {self._questionToAnswer}")
             self._questionToAnswer = -1
             return False
@@ -470,36 +470,39 @@ class FlashcardsManager:
         ## Post-processing
         #### Show answer to the question
         if answerIsCorrect:
-            isSuccess = self.ShowFlashcard_MajorFields(
+            self.ShowFlashcard_MajorFields(
                 userMessenger=userMessenger,
                 flashcard=targetFlashcard, 
                 prefix="*Correct*\n\n")
         else:
-            isSuccess = self.ShowFlashcard_MajorFields(
+            self.ShowFlashcard_MajorFields(
                 userMessenger=userMessenger,
                 flashcard=targetFlashcard, 
                 prefix="*Wrong*\n\n")
-        if isSuccess is False:
-            log.error(f"{self._RespondToQuestion.__name__} failed to show the flashcard")
         return True
     
     
     def _ChangeFlashcardShowingFrequency(self, instruction:Instruction, 
             userMessenger:FlashcardUserMessenger
         ) -> bool:
+        ## Variables initialization
         newFrequency = TryStringToInt(s=instruction.Value)
-        if isinstance(newFrequency, int):
-            self.FlashcardShowingFrequency = newFrequency
-            displayText = f"New frequency: {self.FlashcardShowingFrequency}"
-            isSuccess = userMessenger.ShowCustomTexts(customTexts=displayText)
-            if isSuccess is False:
-                log.error(f"{self._ChangeFlashcardShowingFrequency.__name__} failed to show a msg to user")
-            return True
-        else:
+        ## Pre-condition
+        if not isinstance(newFrequency, int):
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Cannot obtain an integer for frequency change")
             log.warning(f"{self._ChangeFlashcardShowingFrequency.__name__} did not obtain a valid frequency value")
             return False
+        ## Main
+        self.FlashcardShowingFrequency = newFrequency
+        self._DisplayCustomTextToUser(
+            userMessenger=userMessenger,
+            text=f"New frequency: {self.FlashcardShowingFrequency}")
+        log.info(f"{self._ChangeFlashcardShowingFrequency.__name__} changed flashcard showing frequency to \"{newFrequency}\"")
+        return True
     
-    
+
     def _ShowFlashcardToUser(self, instruction:Instruction, 
             dbMessenger:FlashcardDatabaseMessenger, 
             userMessenger:FlashcardUserMessenger
@@ -509,14 +512,19 @@ class FlashcardsManager:
             instruction=instruction, dbMessenger=dbMessenger)
         ## Pre-condition
         if targetFlashcard is None:
-            log.warning(f"{self._ShowFlashcardToUser.__name__} could not find the target flashcard. \"Key\": {instruction.Key}")
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Cannot find the flashcard to show")
+            log.warning(f"{self._ShowFlashcardToUser.__name__} could not find the flashcard to be shown. \"Key\": {instruction.Key}")
             return False
         ## Main
         isSuccess = self.ShowFlashcard_MajorFields(
             userMessenger=userMessenger,
             flashcard=targetFlashcard)
-        if isSuccess is False:
-            log.error(f"{self._ShowFlashcardToUser.__name__} failed to show flashcard. \"Key\": {targetFlashcard.Key}")
+        if isSuccess:
+            log.info(f"{self._ShowFlashcardToUser.__name__} showed a flashcard to user: \"Key\": {targetFlashcard.Key}")
+        else:
+            log.warning(f"{self._ShowFlashcardToUser.__name__} failed in showing a flashcard to user")
         return isSuccess
     
     
@@ -539,6 +547,7 @@ class FlashcardsManager:
             result = result.rstrip("\n")
             return result
         
+        ## Main
         lastUpdateDatetime_str = self._lastUpdateDatetime.strftime(
             "%Y/%m/%d %H:%M:%S")
         timeOfDayPriorities_str = _NumpyArrayToMultiLineString(
@@ -564,13 +573,16 @@ class FlashcardsManager:
             f"*Flashcard count*: {flashcardCount}"
         )
         isSuccess = userMessenger.ShowCustomTexts(customTexts=texts)
-        if isSuccess is False:
+        if isSuccess:
+            log.info(f"{self._ShowInfoToUser.__name__} showed flashcard system information to user")
+        else:
             log.error(f"{self._ShowInfoToUser.__name__} failed to show flashcard system info")
         return isSuccess
     
     
     def _ChangeTimePriority(self, instruction:Instruction=None, 
-            timeIdx:int=None, change:int=None
+            timeIdx:int=None, change:int=None, 
+            userMessenger:FlashcardUserMessenger=None
         ) -> bool:
         ## Variables initialization
         cls = type(self)
@@ -589,12 +601,24 @@ class FlashcardsManager:
         ## Pre-condition
         if not isinstance(timeIdx, int) or timeIdx < 0 or \
             timeIdx >= len(self._timeOfDayPriorities):
-            log.warning(f"{self._ChangeTimePriority.__name__} could not obtain a valid time index for change to be applied. \"Key\": {instruction.Key}")
+            if isinstance(userMessenger, FlashcardUserMessenger):
+                self._DisplayCustomTextToUser(
+                    userMessenger=userMessenger,
+                    text="Cannot obtain a valid time index for time priority change (Range: [0, 23])")
+            log.warning(f"{self._ChangeTimePriority.__name__} cannot obtain a valid time index for time priority change. \"Key\": {instruction.Key}")
             return False
         if not isinstance(change, int):
+            if isinstance(userMessenger, FlashcardUserMessenger):
+                self._DisplayCustomTextToUser(
+                    userMessenger=userMessenger,
+                    text="Cannot obtain an integer for time priority change")
             log.warning(f"{self._ChangeTimePriority.__name__} could not obtain a valid value for the change. \"Value\": {instruction.Value}")
             return False
         if change == 0:
+            if isinstance(userMessenger, FlashcardUserMessenger):
+                self._DisplayCustomTextToUser(
+                    userMessenger=userMessenger,
+                    text="Time priority is unchanged")
             return True
         ## Main
         change_unsigned = max(cls.LOWEST_TIME_PRIORITY, 
@@ -605,3 +629,39 @@ class FlashcardsManager:
         if self._timeOfDayPriorities[timeIdx] > cls.HIGHEST_TIME_PRIORITY:
             _RescalePriorities()
         return True
+    
+    
+    def _HandleInstruction(self, instruction:Instruction, 
+            dbMessenger:FlashcardDatabaseMessenger,
+            userMessenger:FlashcardUserMessenger
+        ) -> None:
+        if instruction.Type == InstructionType.ADD:
+            self._InsertFlashcard(instruction=instruction, 
+                dbMessenger=dbMessenger, userMessenger=userMessenger)
+        elif instruction.Type == InstructionType.DELETE:
+            self._DeleteFlashcard(instruction=instruction, 
+                dbMessenger=dbMessenger, userMessenger=userMessenger)
+        elif instruction.Type == InstructionType.CHANGE_FLASHCARD_PRIORITY:
+            self._ChangeFlashcardPriority(instruction=instruction, 
+                dbMessenger=dbMessenger, userMessenger=userMessenger)
+        elif instruction.Type == InstructionType.RESPOND_TO_QUESTION:
+            self._RespondToQuestion(instruction=instruction, 
+                dbMessenger=dbMessenger, userMessenger=userMessenger)
+        elif instruction.Type == \
+            InstructionType.CHANGE_FLASHCARD_SHOWING_FREQUENCY:
+            self._ChangeFlashcardShowingFrequency(instruction=instruction,
+                userMessenger=userMessenger)
+        elif instruction.Type == InstructionType.SHOW_FLASHCARD:
+            self._ShowFlashcardToUser(instruction=instruction, 
+                dbMessenger=dbMessenger, userMessenger=userMessenger)
+        elif instruction.Type == InstructionType.SHOW_INFO:
+            self._ShowInfoToUser(dbMessenger=dbMessenger, 
+                userMessenger=userMessenger)
+        elif instruction.Type == InstructionType.CHANGE_TIME_PRIORITY:
+            self._ChangeTimePriority(instruction=instruction,
+                userMessenger=userMessenger)
+        else:
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Unknown instruction")
+            log.warning(f"{self._HandleInstruction.__name__} found an unknown instruction")
