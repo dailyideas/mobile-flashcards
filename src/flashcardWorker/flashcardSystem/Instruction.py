@@ -41,6 +41,7 @@ class InstructionType(Enum):
     SHOW_FLASHCARD = enum.auto()
     SHOW_INFO = enum.auto()
     CHANGE_TIME_PRIORITY = enum.auto()
+    SHOW_HELP = enum.auto()
 
 
 @dataclass
@@ -53,7 +54,8 @@ class Instruction:
         "freq": InstructionType.CHANGE_FLASHCARD_SHOWING_FREQUENCY,
         "show": InstructionType.SHOW_FLASHCARD,
         "info": InstructionType.SHOW_INFO,
-        "time": InstructionType.CHANGE_TIME_PRIORITY
+        "time": InstructionType.CHANGE_TIME_PRIORITY,
+        "help": InstructionType.SHOW_HELP
     }
 
     Type:InstructionType = InstructionType.UNKNOWN
@@ -91,7 +93,9 @@ class Instruction:
             InstructionType.UNKNOWN)
         #### Case when len(textSplitted) == 1
         if len(textSplitted) == 1:
-            if not self.Type == InstructionType.SHOW_INFO:
+            validTypes = [InstructionType.SHOW_HELP, 
+                InstructionType.SHOW_INFO]
+            if not self.Type in validTypes:
                 self.Type = InstructionType.UNKNOWN
             return
         #### Case when len(textSplitted) in range [2, 4]
@@ -113,6 +117,46 @@ class Instruction:
         elif self.Type == InstructionType.CHANGE_TIME_PRIORITY:
             self.Key = textSplitted[1]
             self.Value = textSplitted[2] if len(textSplitted) >= 3 else "1"
+        elif self.Type == InstructionType.SHOW_HELP:
+            self.Key = textSplitted[1]
+
+
+    @classmethod
+    def GetHelp(cls):
+        return (
+            f"List of available instructions:\n"
+            f"add :  add flashcard\n"
+            f"del :  delete flashcard\n"
+            f"pri :  increase/decrease the priority of flashcard\n"
+            f"freq :  set the flashcard showing frequency per day\n"
+            f"show :  show a specific flashcard\n"
+            f"info :  display basic information of the flashcard system\n"
+            f"time :  increase/decrease the time of day priority for flashcard showing\n"
+        )
+        
+        
+    @classmethod
+    def GetInstructionUsage(cls, key:str):
+        instructionType = cls.StringToTypeMap.get(key, 
+            InstructionType.UNKNOWN)
+        if instructionType == InstructionType.ADD:
+            return r"add ; <key> ; <value> ; <remarks>"
+        elif instructionType == InstructionType.DELETE:
+            return r"del ; <id / key of flashcard>"
+        elif instructionType == InstructionType.CHANGE_FLASHCARD_PRIORITY:
+            return r"pri ; <id / key of flashcard> ; <change>"
+        elif instructionType == InstructionType.RESPOND_TO_QUESTION:
+            return r"This command is not availavle yet"
+        elif instructionType == InstructionType.CHANGE_FLASHCARD_SHOWING_FREQUENCY:
+            return r"freq ; <value>"
+        elif instructionType == InstructionType.SHOW_FLASHCARD:
+            return r"show ; <id / key of flashcard>"
+        elif instructionType == InstructionType.SHOW_INFO:
+            return r"info"
+        elif instructionType == InstructionType.CHANGE_TIME_PRIORITY:
+            return r"time ; <hour in range [0, 23]> ; <change>"
+        else:
+            return f"{key} is not an available command"
     
     
 if __name__ == "__main__":    

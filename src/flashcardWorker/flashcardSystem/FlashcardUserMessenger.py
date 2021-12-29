@@ -38,6 +38,33 @@ else:
 #### Class #### 
 #### #### #### #### #### 
 class FlashcardUserMessenger:
+    """ Characters to escape in Markdown
+    
+        Reference
+        ---- ----
+        1. https://www.markdownguide.org/basic-syntax/#characters-you-can-escape
+    """
+    SpecialCharactersTranslation = str.maketrans( {
+        "\\": r"\\",
+        "`": r"\`",
+        "*":  r"\*",
+        "_":  r"\_",
+        "{":  r"\{",
+        "}":  r"\}",
+        "[":  r"\[",
+        "]":  r"\]",
+        "<":  r"\<",
+        ">":  r"\>",
+        "(":  r"\(",
+        ")":  r"\)",
+        "#":  r"\#",
+        "+":  r"\+",
+        "-":  r"\-",
+        ".":  r"\.",
+        "!":  r"\!",
+        "|":  r"\|"} )
+    
+    
     def __init__(self, bot:telegram.Bot, chatId:int) -> None:
         ## Pre-condition
         assert isinstance(bot, telegram.Bot)
@@ -56,10 +83,12 @@ class FlashcardUserMessenger:
         text = cls._FlashcardToString(flashcard=flashcard, 
             infoToShow=infoToShow)
         text = f"{prefix}{text}{suffix}"
-        return self.ShowCustomText(text=text)
+        return self.ShowCustomText(text=text, autoEscape=False)
 
 
-    def ShowCustomText(self, text:str) -> bool:
+    def ShowCustomText(self, text:str, autoEscape:bool) -> bool:
+        if autoEscape:
+            text = text.translate(self.SpecialCharactersTranslation)
         result = self._bot.send_message(text=text, 
             chat_id=self._chatId,
             parse_mode=telegram.constants.PARSEMODE_MARKDOWN_V2,
@@ -114,31 +143,6 @@ class FlashcardUserMessenger:
         if not isinstance(infoToShow, list):
             infoToShow = [infoToShow]
         ## Main
-        """ Characters to escape in Markdown
-        
-            Reference
-            ---- ----
-            1. https://www.markdownguide.org/basic-syntax/#characters-you-can-escape
-        """
-        specialCharactersTranslation = str.maketrans( {
-            "\\": r"\\",
-            "`": r"\`",
-            "*":  r"\*",
-            "_":  r"\_",
-            "{":  r"\{",
-            "}":  r"\}",
-            "[":  r"\[",
-            "]":  r"\]",
-            "<":  r"\<",
-            ">":  r"\>",
-            "(":  r"\(",
-            ")":  r"\)",
-            "#":  r"\#",
-            "+":  r"\+",
-            "-":  r"\-",
-            ".":  r"\.",
-            "!":  r"\!",
-            "|":  r"\|"} )
         """ Translate strings in Python
         
             Reference
@@ -147,13 +151,16 @@ class FlashcardUserMessenger:
         """
         result = ""
         if Flashcard.KEY_TAG in infoToShow:
-            key = flashcard.Key.translate(specialCharactersTranslation)
+            key = flashcard.Key.translate(
+                cls.SpecialCharactersTranslation)
             result += f"*{key}*\n\n"
         if Flashcard.VALUE_TAG in infoToShow:
-            value = flashcard.Value.translate(specialCharactersTranslation)
+            value = flashcard.Value.translate(
+                cls.SpecialCharactersTranslation)
             result += f"{value}\n\n"
         if Flashcard.REMARKS_TAG in infoToShow:
-            remarks = flashcard.Remarks.translate(specialCharactersTranslation)
+            remarks = flashcard.Remarks.translate(
+                cls.SpecialCharactersTranslation)
             result += f"{remarks}\n\n"
         if Flashcard.ID_TAG in infoToShow:
             result += f"{flashcard.Id}\n"

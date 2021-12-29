@@ -268,7 +268,7 @@ class FlashcardsManager:
     def _DisplayCustomTextToUser(cls, userMessenger:FlashcardUserMessenger, 
             text:str
         ) -> bool:
-        isSuccess = userMessenger.ShowCustomText(text=text)
+        isSuccess = userMessenger.ShowCustomText(text=text, autoEscape=True)
         if isSuccess is False:
             log.error(f"{cls._DisplayCustomTextToUser.__name__} failed to show custom text to user")
         return isSuccess
@@ -591,7 +591,7 @@ class FlashcardsManager:
             f"{withinHourShowFlashcardsDistribution_str}\n"
             f"*Flashcard count*: {flashcardCount}"
         )
-        isSuccess = userMessenger.ShowCustomText(text=text)
+        isSuccess = userMessenger.ShowCustomText(text=text, autoEscape=True)
         if isSuccess:
             log.info(f"{self._ShowInfoToUser.__name__} showed flashcard system information to user")
         else:
@@ -653,6 +653,20 @@ class FlashcardsManager:
         return True
     
     
+    def _ShowHelpToUser(self, instruction:Instruction, 
+            userMessenger:FlashcardUserMessenger
+        ) -> bool:
+        if instruction.Key == "": ## Default value 
+            isSuccess = self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text=Instruction.GetHelp() )
+        else:
+            isSuccess = self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text=Instruction.GetInstructionUsage(instruction.Key) )
+        return isSuccess
+    
+    
     def _HandleInstruction(self, instruction:Instruction, 
             dbMessenger:FlashcardDatabaseMessenger,
             userMessenger:FlashcardUserMessenger
@@ -681,6 +695,9 @@ class FlashcardsManager:
                 userMessenger=userMessenger)
         elif instruction.Type == InstructionType.CHANGE_TIME_PRIORITY:
             self._ChangeTimePriority(instruction=instruction,
+                userMessenger=userMessenger)
+        elif instruction.Type == InstructionType.SHOW_HELP:
+            self._ShowHelpToUser(instruction=instruction, 
                 userMessenger=userMessenger)
         else:
             self._DisplayCustomTextToUser(
