@@ -21,4 +21,10 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 COPY ./ ./
 
-CMD ["./startup.sh"]
+## Capture SIGTERM in python script
+## 
+## Reference
+## ---- ----
+## 1. https://stackoverflow.com/questions/64954213/python-how-to-recieve-sigint-in-docker-to-stop-service
+# CMD ["./startup.sh"]
+ENTRYPOINT ["python", "Main.py"]

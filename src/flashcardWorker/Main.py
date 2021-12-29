@@ -1,5 +1,6 @@
 import datetime, logging, os, pathlib, sys, time
-import urllib
+import math, signal, urllib
+from functools import partial
 from logging.handlers import RotatingFileHandler
 from os import path
 
@@ -79,6 +80,13 @@ def LoadFlashcardsManager(cachePath:str,
     else:
         flashcardsManager.NumJobsPerHour = numJobsPerHour
         return flashcardsManager
+    
+    
+def ExitHandler(flashcardsManager:FlashcardsManager, cachePath:str, 
+        signum, frame
+    ) -> None:
+    flashcardsManager.Save(cachePath=cachePath)
+    log.info(f"Program exits on the receipt of signal {signum}")
 
 
 #### #### #### #### #### 
@@ -88,6 +96,7 @@ def LoadFlashcardsManager(cachePath:str,
 log.info("Program starts")
 
 ## Pre-condition
+#### Ensure both username and password exist for database accessing 
 if (DB_USERNAME is None) or (DB_PASSWORD is None):
     log.error("Database username or password is undefined")
     sys.exit(1)
@@ -108,6 +117,17 @@ except telegram.error.InvalidToken:
 except:
     log.error("Encounter an unexpected error")
     sys.exit(1)
+#### Ensure number of jobs per hour is valid
+if FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR < 1:
+    FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR = 1
+    log.warning("Number of jobs per hour must >= 1. It is now set to 1")
+if FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR > 60:
+    FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR = 60
+    log.warning("Number of jobs per hour must <= 60. It is now set to 60")
+if 60 % FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR != 0:
+    FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR = \
+        60 // math.ceil(60 / FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR)
+    log.warning(f"60 must be divisible by the number of jobs. It is now set to {FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR}")
 
 ## Variables initialization
 cachePath = path.join(CACHE_DIRECTORY, "flashcardsManager.pickle")
@@ -117,17 +137,34 @@ flashcardDatabaseMessenger = FlashcardDatabaseMessenger(
     dbCollection=htmlDataContainer_collection)
 
 ## Main
+#### Obtain FlashcardsManager
 flashcardsManager = LoadFlashcardsManager(cachePath=cachePath, 
     numJobsPerHour=FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR)
-flashcardsManager.ProcessUserInstructions(
-    dbMessenger=flashcardDatabaseMessenger,
-    userMessenger=flashcardUserMessenger)
-flashcardsManager.ShowRandomFlashcardsWithPriority(
-    dbMessenger=flashcardDatabaseMessenger,
-    userMessenger=flashcardUserMessenger)
-
-## Post-processing
-flashcardsManager.Save(cachePath=cachePath)
+#### Add signal handling
+signal.signal(signal.SIGTERM, 
+    partial(ExitHandler, flashcardsManager, cachePath) )
+#### Endless loop
+minuteStepsPerJob = 60 // FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR
+lastCheckMinute = -1
+while True:
+    ## Variables initialization
+    currentDatetime = datetime.datetime.now()
+    currentMinute = currentDatetime.minute
+    ## Main
+    #### Periodically run FlashcardsManager.ShowRandomFlashcardsWithPriority, and save the settings of FlashcardsManager afterwards
+    if currentMinute != lastCheckMinute and currentMinute % minuteStepsPerJob == 0:
+        flashcardsManager.ShowRandomFlashcardsWithPriority(
+            dbMessenger=flashcardDatabaseMessenger,
+            userMessenger=flashcardUserMessenger)
+        flashcardsManager.Save(cachePath=cachePath)
+    #### Check for user inputs
+    flashcardsManager.ProcessUserInstructions(
+        dbMessenger=flashcardDatabaseMessenger,
+        userMessenger=flashcardUserMessenger)
+    ## Post-processing
+    lastCheckMinute = currentMinute
+    #### Useless short sleep
+    time.sleep(1)
 
 ## Epilogue
 log.info("Program ends")
