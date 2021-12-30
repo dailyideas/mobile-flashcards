@@ -67,8 +67,12 @@ class FlashcardUserMessenger:
     
     def __init__(self, bot:telegram.Bot, chatId:int) -> None:
         ## Pre-condition
-        assert isinstance(bot, telegram.Bot)
-        assert isinstance(chatId, int)
+        if not isinstance(bot, telegram.Bot):
+            log.error("bot must be a telegram.Bot object")
+            raise ValueError()
+        if not isinstance(chatId, int):
+            log.error("chatId must be an int")
+            raise ValueError()
         ## Main
         self._bot = bot
         self._chatId = chatId ## int

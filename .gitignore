@@ -3,6 +3,8 @@
 __pycache__/
 caches/
 logs/
+exports/
+temp/
 
 ## Local-level ignoring
 .env

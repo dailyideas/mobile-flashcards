@@ -38,6 +38,8 @@ services:
         volumes:
             - ./logs/flashcardWorker:/usr/app/logs
             - ./caches/flashcardWorker:/usr/app/caches
+            - ./exports/flashcardWorker:/usr/app/exports
+            - ./temp:/usr/app/temp
         depends_on:
             - database
         deploy:

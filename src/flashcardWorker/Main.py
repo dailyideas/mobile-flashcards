@@ -107,7 +107,7 @@ escaped_password = urllib.parse.quote_plus(DB_PASSWORD)
 host = f"mongodb://{DB_USERNAME}:{escaped_password}@database/{DB_NAME}"
 client = pymongo.MongoClient(host)
 db = client[DB_NAME]
-htmlDataContainer_collection = db["cache.HtmlDataContainer"]
+flashcardCollection = db["flashcardCollection"]
 #### Initialize Telegram bot
 try:
     bot = telegram.Bot(token=TG_FLASHCARD_BOT_TOKEN)
@@ -134,7 +134,7 @@ cachePath = path.join(CACHE_DIRECTORY, "flashcardsManager.pickle")
 flashcardUserMessenger = FlashcardUserMessenger(bot=bot, 
     chatId=TG_FLASHCARD_BOT_CHAT_ID)
 flashcardDatabaseMessenger = FlashcardDatabaseMessenger(
-    dbCollection=htmlDataContainer_collection)
+    dbCollection=flashcardCollection)
 
 ## Main
 #### Obtain FlashcardsManager

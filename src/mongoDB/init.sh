@@ -5,14 +5,14 @@ mongo --username "$MONGO_INITDB_ROOT_USERNAME" \
 --authenticationDatabase admin << EOF
 use $MONGO_INITDB_DATABASE
 
-const webScrapingCollections = [
-    'cache.HtmlDataContainer'
+const flashcardSystemCollections = [
+    'flashcardCollection'
 ]
-for (var c of webScrapingCollections) {
+for (var c of flashcardSystemCollections) {
     db.createCollection(c)
 }
 
-var workerPrivileges = webScrapingCollections.map(function(c) {
+var workerPrivileges = flashcardSystemCollections.map(function(c) {
     return {
         resource: {
             db: '$MONGO_INITDB_DATABASE',
