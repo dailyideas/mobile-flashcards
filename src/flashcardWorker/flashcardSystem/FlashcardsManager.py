@@ -591,7 +591,7 @@ class FlashcardsManager:
             f"{withinHourShowFlashcardsDistribution_str}\n"
             f"*Flashcard count*: {flashcardCount}"
         )
-        isSuccess = userMessenger.ShowCustomText(text=text, autoEscape=True)
+        isSuccess = userMessenger.ShowCustomText(text=text, autoEscape=False)
         if isSuccess:
             log.info(f"{self._ShowInfoToUser.__name__} showed flashcard system information to user")
         else:

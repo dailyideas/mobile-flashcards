@@ -145,24 +145,27 @@ signal.signal(signal.SIGTERM,
     partial(ExitHandler, flashcardsManager, cachePath) )
 #### Endless loop
 minuteStepsPerJob = 60 // FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR
-lastCheckMinute = -1
+lastLoopDatetime = datetime.datetime.now()
 while True:
     ## Variables initialization
+    lastLoopMinute = lastLoopDatetime.minute
     currentDatetime = datetime.datetime.now()
     currentMinute = currentDatetime.minute
     ## Main
-    #### Periodically run FlashcardsManager.ShowRandomFlashcardsWithPriority, and save the settings of FlashcardsManager afterwards
-    if currentMinute != lastCheckMinute and currentMinute % minuteStepsPerJob == 0:
+    #### Periodically run FlashcardsManager.ShowRandomFlashcardsWithPriority
+    if currentMinute != lastLoopMinute and currentMinute % minuteStepsPerJob == 0:
         flashcardsManager.ShowRandomFlashcardsWithPriority(
             dbMessenger=flashcardDatabaseMessenger,
             userMessenger=flashcardUserMessenger)
+    #### Save the settings of FlashcardsManager at the start of each day
+    if currentDatetime.date() != lastLoopDatetime.date():
         flashcardsManager.Save(cachePath=cachePath)
     #### Check for user inputs
     flashcardsManager.ProcessUserInstructions(
         dbMessenger=flashcardDatabaseMessenger,
         userMessenger=flashcardUserMessenger)
     ## Post-processing
-    lastCheckMinute = currentMinute
+    lastLoopDatetime = currentDatetime
     #### Useless short sleep
     time.sleep(1)
 
