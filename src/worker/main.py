@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import datetime, logging, os, pathlib, sys, time
 import math, signal, urllib
 from functools import partial
@@ -8,8 +9,8 @@ import pymongo
 import telegram
 
 from flashcardSystem.flashcardDatabaseMessenger import FlashcardDatabaseMessenger
-from flashcardSystem.flashcardsManager import FlashcardsManager
 from flashcardSystem.flashcardUserMessenger import FlashcardUserMessenger
+from flashcardSystem.flashcardsManager import FlashcardsManager
 
 
 #### #### #### #### #### 

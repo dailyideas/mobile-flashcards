@@ -1,5 +1,6 @@
+#!/usr/bin/env python
 import datetime, logging, os, sys, time
-import argparse, urllib
+import urllib
 from logging.handlers import RotatingFileHandler
 
 import pymongo
@@ -19,7 +20,7 @@ SCRIPT_NAME = os.path.basename(__file__).split(".")[0]
 SCRIPT_DIRECTORY = os.path.dirname(os.path.abspath(__file__) )
 ROOT_DIRECTORY = SCRIPT_DIRECTORY
 LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, "logs/", SCRIPT_NAME)
-TEMP_DIRECTORY = os.path.join(ROOT_DIRECTORY, "temp/")
+EXPORT_DIRECTORY = os.path.join(ROOT_DIRECTORY, "exports/", SCRIPT_NAME)
 LOG_LEVEL = logging.INFO
 
 
@@ -35,6 +36,7 @@ log = logging.getLogger()
 #### #### #### #### #### 
 #### Paths
 os.makedirs(LOG_DIRECTORY, exist_ok=True)
+os.makedirs(EXPORT_DIRECTORY, exist_ok=True)
 #### Logging
 formatter = logging.Formatter(
     "%(asctime)s-%(name)s [%(levelname)s] %(message)s",
@@ -70,14 +72,6 @@ if (DB_USERNAME is None) or (DB_PASSWORD is None):
     sys.exit(1)
 
 ## Pre-processing
-####Reads settings from CLI arguments
-parser = argparse.ArgumentParser(
-    description="Importing flashcards to database", 
-    allow_abbrev=False)
-parser.add_argument("-f", "--file",
-    type=str,
-    required=True,
-    help="Path of the file for importing")
 #### Connects to the database
 escaped_password = urllib.parse.quote_plus(DB_PASSWORD)
 host = f"mongodb://{DB_USERNAME}:{escaped_password}@database/{DB_NAME}"
@@ -86,19 +80,13 @@ db = client[DB_NAME]
 flashcardCollection = db["flashcardCollection"]
 
 ## Variables initialization
-args = parser.parse_args()
-importFileName = args.file
-importFilePath = os.path.join(TEMP_DIRECTORY, importFileName)
 flashcardDatabaseMessenger = FlashcardDatabaseMessenger(
     dbCollection=flashcardCollection)
 
-## Pre-condition
-if not os.path.isfile(importFilePath):
-    log.error(f"Path \"{importFilePath}\" does not exist")
-    sys.exit(1)
-
-## Main
-flashcardDatabaseMessenger.ImportFlashcardsFromFile(filePath=importFilePath)
+currentDatetime_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+exportFileName = f"ExportedFlashcards_{currentDatetime_str}.csv"
+exportPath = os.path.join(EXPORT_DIRECTORY, exportFileName)
+flashcardDatabaseMessenger.ExportFlashcardsToFile(exportPath=exportPath)
 
 ## Epilogue
 log.info("Program ends")

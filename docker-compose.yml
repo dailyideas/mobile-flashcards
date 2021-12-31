@@ -24,7 +24,7 @@ services:
         container_name: flashcard-worker
         restart: always
         build: 
-            context: ./src/flashcardWorker
+            context: ./src/worker
             args:
                 - APP_TIMEZONE=${TIMEZONE}
         environment:

@@ -26,12 +26,8 @@ log = logging.getLogger(name=SCRIPT_NAME)
 #### Paths
 sys.path.insert(1, str(ROOT_DIRECTORY) )
 #### Import local packages
-if __name__ == '__main__' or SCRIPT_DIRECTORY in sys.path:
-    from flashcard import Flashcard
-    from instruction import InstructionType, Instruction
-else:
-    from .flashcard import Flashcard
-    from .instruction import InstructionType, Instruction
+from utils.flashcard import Flashcard
+from utils.instruction import InstructionType, Instruction
 
 
 #### #### #### #### #### 
