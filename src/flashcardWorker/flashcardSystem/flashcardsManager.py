@@ -29,17 +29,17 @@ log = logging.getLogger(name=SCRIPT_NAME)
 sys.path.insert(1, str(ROOT_DIRECTORY) )
 #### Import local packages
 if __name__ == '__main__' or SCRIPT_DIRECTORY in sys.path:
-    from Common import TryStringToInt, FlipBiasedCoin
-    from Flashcard import Flashcard
-    from FlashcardDatabaseMessenger import FlashcardDatabaseMessenger
-    from FlashcardUserMessenger import FlashcardUserMessenger
-    from Instruction import InstructionType, Instruction
+    from common import TryStringToInt, FlipBiasedCoin
+    from flashcard import Flashcard
+    from flashcardDatabaseMessenger import FlashcardDatabaseMessenger
+    from flashcardUserMessenger import FlashcardUserMessenger
+    from instruction import InstructionType, Instruction
 else:
-    from .Common import TryStringToInt, FlipBiasedCoin
-    from .Flashcard import Flashcard
-    from .FlashcardDatabaseMessenger import FlashcardDatabaseMessenger
-    from .FlashcardUserMessenger import FlashcardUserMessenger
-    from .Instruction import InstructionType, Instruction
+    from .common import TryStringToInt, FlipBiasedCoin
+    from .flashcard import Flashcard
+    from .flashcardDatabaseMessenger import FlashcardDatabaseMessenger
+    from .flashcardUserMessenger import FlashcardUserMessenger
+    from .instruction import InstructionType, Instruction
 
 
 #### #### #### #### #### 

@@ -7,9 +7,9 @@ from os import path
 import pymongo
 import telegram
 
-from flashcardSystem.FlashcardDatabaseMessenger import FlashcardDatabaseMessenger
-from flashcardSystem.FlashcardsManager import FlashcardsManager
-from flashcardSystem.FlashcardUserMessenger import FlashcardUserMessenger
+from flashcardSystem.flashcardDatabaseMessenger import FlashcardDatabaseMessenger
+from flashcardSystem.flashcardsManager import FlashcardsManager
+from flashcardSystem.flashcardUserMessenger import FlashcardUserMessenger
 
 
 #### #### #### #### #### 

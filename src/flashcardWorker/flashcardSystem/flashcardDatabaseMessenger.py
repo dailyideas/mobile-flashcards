@@ -30,9 +30,9 @@ log = logging.getLogger(name=SCRIPT_NAME)
 sys.path.insert(1, str(ROOT_DIRECTORY) )
 #### Import local packages
 if __name__ == '__main__' or SCRIPT_DIRECTORY in sys.path:
-    from Flashcard import Flashcard
+    from flashcard import Flashcard
 else:
-    from .Flashcard import Flashcard
+    from .flashcard import Flashcard
     
     
 #### #### #### #### #### 
