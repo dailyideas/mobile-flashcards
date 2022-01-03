@@ -10,6 +10,7 @@
 1. [Usage](#Usage)
 1. [Licensing](#Licensing)
 1. [Dependencies](#Dependencies)
+1. [Versioning](#Versioning)
 
 ## Background
 It is very common for me to have learnt something, and then forgetting it after a day or two, if the same information does not appear to me repeatedly. Using flashcards may help. However, I'm too lazy to jot things down on physical flashcards. Even if I have written some, I may not have the motivation to pick them up and refresh my memory. Flashcard Apps could be an alternative. I want to have a handy flashcard system which I can add and delete flashcards, and the flashcard system will pop up random flashcards I added from time to time. Instead of searching the App store / Google Play Store for an app that meets my requirements, which are usually too bulky in functionalities, I decided to make one myself. 
