@@ -90,7 +90,7 @@ You are allowed to add or not adding whitespaces before and after the semi-colon
 <instruction type>;<parameter 1>
 ```
 
-Instruction types are not case sensitive. That is, for the instruction *add*, you can also type *Add* / *ADD* / *aDd*, etc. However, parameters are case-sensitive, so you may store the word *apple* and *Apple* as two flashcards. 
+Instruction types are not case-sensitive. That is, for the instruction *add*, you can also type *Add* / *ADD* / *aDd*, etc. However, parameters are case-sensitive, so you may store the word *apple* and *Apple* as two flashcards. 
 
 ### Available instructions
 #### Add a flashcard
