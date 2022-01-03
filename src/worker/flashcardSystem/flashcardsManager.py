@@ -43,6 +43,7 @@ from utils.instruction import InstructionType, Instruction
 #### Class #### 
 #### #### #### #### #### 
 class FlashcardsManager:
+    VERSION = "1.0.0"
     LOWEST_TIME_PRIORITY = 0
     HIGHEST_TIME_PRIORITY = 999
     LOWEST_FLASHCARD_SHOWING_FREQUENCY = 0
@@ -52,6 +53,7 @@ class FlashcardsManager:
         ## Variables initialization
         cls = type(self)
         ## Main
+        self._version = self.VERSION
         self._numJobsPerHour = numJobsPerHour
         self._lastUpdateDatetime = None ## datetime.datetime: Renewed whenever "ShowRandomFlashcardsWithPriority" is called
         self._lastInstructionId = -1 ## int
@@ -72,6 +74,11 @@ class FlashcardsManager:
         self._lastUpdateDatetime = datetime.datetime.now()
 
 
+    @property
+    def Version(self) -> str:
+        return self._version
+    
+    
     @property
     def NumJobsPerHour(self) -> int:
         return self._numJobsPerHour
@@ -125,6 +132,15 @@ class FlashcardsManager:
             payload = pickle.load(fhandler)
         if not isinstance(payload, cls):
             log.error(f"Instance loaded from \"{cachePath}\" is not an \"{cls.__name__}\"")
+            return None
+        cachedVersion = payload.Version
+        cachedVersion_major = cachedVersion.split(".")[0]
+        currentVersion = cls.VERSION
+        currentVersion_major = currentVersion.split(".")[0]
+        if currentVersion_major != cachedVersion_major:
+            log.warning( (
+                f"Version of instance loaded from \"{cachePath}\": {cachedVersion}, "
+                f"which is incompatible to the current version: {currentVersion}") )
             return None
         ## Epilogue
         log.info(f"Loaded a {cls.__name__} instance from \"{cachePath}\"")
