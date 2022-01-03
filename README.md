@@ -223,3 +223,6 @@ This project is dependent on third-party libraries or other resources listed bel
 1. python-telegram-bot
     - python-telegram-bot
     - [LGPL-3](https://github.com/python-telegram-bot/python-telegram-bot/blob/master/LICENSE)
+
+## Versioning
+This project follows the [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
