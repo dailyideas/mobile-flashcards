@@ -643,7 +643,10 @@ class FlashcardsManager:
             min( abs(change), cls.HIGHEST_TIME_PRIORITY) )
         change = int(math.copysign(change_unsigned, change) )
         self._timeOfDayPriorities[timeIdx] += change
-        log.info(f"{self._ChangeTimePriority.__name__} changed the priority at index \"{timeIdx}\" to {self._timeOfDayPriorities[timeIdx] }")
+        self._DisplayCustomTextToUser(
+            userMessenger=userMessenger,
+            text=f"Time priority at hour {timeIdx} is changed to {self._timeOfDayPriorities[timeIdx] }")
+        log.info(f"{self._ChangeTimePriority.__name__} changed the priority at hour {timeIdx} to {self._timeOfDayPriorities[timeIdx] }")
         ## Post-processing
         if self._timeOfDayPriorities[timeIdx] > cls.HIGHEST_TIME_PRIORITY:
             _RescalePriorities()
