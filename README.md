@@ -18,7 +18,7 @@ The project uses *Docker* as the platform. *MongoDB* as the backend to store the
 
 ## Prerequisites
 1. A computer
-2. Telegram installed on your phone
+2. [Telegram](https://telegram.org/) installed on your phone
 
 ## Warnings
 1. This project was tested on *Ubuntu Focal 20.04* only. The [_Installation guide_](#Installation-guide) may not be applicable to other versions and Operating systems.
