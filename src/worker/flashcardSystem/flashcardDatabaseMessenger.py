@@ -1,6 +1,6 @@
 from __future__ import annotations
 import datetime, logging, os, pathlib, sys, time
-import csv
+import csv, urllib
 from os import path
 
 import pymongo
@@ -35,13 +35,17 @@ from utils.flashcard import Flashcard
 #### Class #### 
 #### #### #### #### #### 
 class FlashcardDatabaseMessenger:
-    def __init__(self, dbCollection:Collection) -> None:
-        ## Pre-condition
-        if not isinstance(dbCollection, Collection):
-            log.error("dbCollection has to be a pymongo.collection.Collection object")
-            raise ValueError()
+    def __init__(self, username:str, password:str, 
+            dbName:str, flashcardCollectionName:str
+        ) -> None:
+        ## Variables initialization
+        escaped_password = urllib.parse.quote_plus(password)
+        host = f"mongodb://{username}:{escaped_password}@database/{dbName}"
+        client = pymongo.MongoClient(host)
+        db = client[dbName]
+        flashcardCollection = db[flashcardCollectionName]
         ## Main
-        self._dbCollection = dbCollection
+        self._dbCollection = flashcardCollection
     
     
     def InsertFlashcard(self, flashcard:Flashcard) -> bool:

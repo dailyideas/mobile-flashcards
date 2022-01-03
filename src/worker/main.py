@@ -1,12 +1,8 @@
 #!/usr/bin/env python
 import datetime, logging, os, pathlib, sys, time
-import math, signal, urllib
+import math, signal
 from functools import partial
 from logging.handlers import RotatingFileHandler
-from os import path
-
-import pymongo
-import telegram
 
 from flashcardSystem.flashcardDatabaseMessenger import FlashcardDatabaseMessenger
 from flashcardSystem.flashcardUserMessenger import FlashcardUserMessenger
@@ -19,6 +15,8 @@ from flashcardSystem.flashcardsManager import FlashcardsManager
 DB_NAME = os.environ.get("APP_DB_NAME")
 DB_USERNAME = os.environ.get("APP_DB_USERNAME")
 DB_PASSWORD = os.environ.get("APP_DB_PASSWORD")
+DB_FLASHCARD_COLLECTION_NAME = os.environ.get(
+    "APP_DB_FLASHCARD_COLLECTION_NAME")
 TG_FLASHCARD_BOT_TOKEN = os.environ.get("APP_TG_FLASHCARD_BOT_TOKEN")
 TG_FLASHCARD_BOT_CHAT_ID = int(os.environ.get(
     "APP_TG_FLASHCARD_BOT_CHAT_ID") )
@@ -26,11 +24,11 @@ FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR = int(os.environ.get(
     "APP_FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR") )
 RELEASE_MODE = os.environ.get("APP_RELEASE_MODE")
 
-SCRIPT_NAME = path.basename(__file__).split(".")[0]
-SCRIPT_DIRECTORY = path.dirname(path.abspath(__file__) )
+SCRIPT_NAME = os.path.basename(__file__).split(".")[0]
+SCRIPT_DIRECTORY = os.path.dirname(os.path.abspath(__file__) )
 ROOT_DIRECTORY = SCRIPT_DIRECTORY
-CACHE_DIRECTORY = path.join(ROOT_DIRECTORY, "caches/", SCRIPT_NAME)
-LOG_DIRECTORY = path.join(ROOT_DIRECTORY, "logs/", SCRIPT_NAME)
+CACHE_DIRECTORY = os.path.join(ROOT_DIRECTORY, "caches/", SCRIPT_NAME)
+LOG_DIRECTORY = os.path.join(ROOT_DIRECTORY, "logs/", SCRIPT_NAME)
 LOG_LEVEL = logging.INFO
 
 
@@ -51,7 +49,7 @@ os.makedirs(LOG_DIRECTORY, exist_ok=True)
 formatter = logging.Formatter(
     "%(asctime)s-%(name)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%dT%H:%M:%S")
-logPath = path.join(LOG_DIRECTORY, SCRIPT_NAME + ".log")
+logPath = os.path.join(LOG_DIRECTORY, SCRIPT_NAME + ".log")
 rotating_file = RotatingFileHandler(logPath, mode='a', maxBytes=2e6, 
     backupCount=10)
 rotating_file.setFormatter(formatter)
@@ -72,6 +70,37 @@ log.debug("Python version: %s", sys.version.split(" ")[0] )
 #### #### #### #### #### 
 #### Functions #### 
 #### #### #### #### #### 
+def CreateFlashcardDatabaseMessenger(username:str, password:str, 
+        dbName:str, flashcardCollectionName:str
+    ) -> FlashcardDatabaseMessenger:
+    try:
+        flashcardDatabaseMessenger = FlashcardDatabaseMessenger(
+            username=username, password=password, 
+            dbName=dbName, flashcardCollectionName=flashcardCollectionName)
+    except:
+        log.exception("Error message: ")
+        log.critical( (
+            f"{CreateFlashcardDatabaseMessenger.__name__} encountered exception "
+            f"when creating {FlashcardDatabaseMessenger.__name__}") )
+        sys.exit(1)
+    return flashcardDatabaseMessenger
+
+
+def CreateFlashcardUserMessenger(token:str, 
+        chatId:int
+    ) -> FlashcardUserMessenger:
+    try:
+        flashcardUserMessenger = FlashcardUserMessenger(token=token, 
+            chatId=chatId)
+    except:
+        log.exception("Error message: ")
+        log.critical( (
+            f"{CreateFlashcardUserMessenger.__name__} encountered exception "
+            f"when creating {FlashcardUserMessenger.__name__}") )
+        sys.exit(1)
+    return flashcardUserMessenger
+
+
 def LoadFlashcardsManager(cachePath:str, 
         numJobsPerHour:int
     ) -> FlashcardsManager:
@@ -96,28 +125,7 @@ def ExitHandler(flashcardsManager:FlashcardsManager, cachePath:str,
 ## Prologue
 log.info("Program starts")
 
-## Pre-condition
-#### Ensure both username and password exist for database accessing 
-if (DB_USERNAME is None) or (DB_PASSWORD is None):
-    log.error("Database username or password is undefined")
-    sys.exit(1)
-
 ## Pre-processing
-#### Connects to the database
-escaped_password = urllib.parse.quote_plus(DB_PASSWORD)
-host = f"mongodb://{DB_USERNAME}:{escaped_password}@database/{DB_NAME}"
-client = pymongo.MongoClient(host)
-db = client[DB_NAME]
-flashcardCollection = db["flashcardCollection"]
-#### Initialize Telegram bot
-try:
-    bot = telegram.Bot(token=TG_FLASHCARD_BOT_TOKEN)
-except telegram.error.InvalidToken:
-    log.error("Token for accessing the Telegram bot is invalid")
-    sys.exit(1)
-except:
-    log.error("Encounter an unexpected error")
-    sys.exit(1)
 #### Ensure number of jobs per hour is valid
 if FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR < 1:
     FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR = 1
@@ -131,11 +139,13 @@ if 60 % FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR != 0:
     log.warning(f"60 must be divisible by the number of jobs. It is now set to {FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR}")
 
 ## Variables initialization
-cachePath = path.join(CACHE_DIRECTORY, "flashcardsManager.pickle")
-flashcardUserMessenger = FlashcardUserMessenger(bot=bot, 
+cachePath = os.path.join(CACHE_DIRECTORY, "flashcardsManager.pickle")
+flashcardUserMessenger = CreateFlashcardUserMessenger(
+    token=TG_FLASHCARD_BOT_TOKEN, 
     chatId=TG_FLASHCARD_BOT_CHAT_ID)
-flashcardDatabaseMessenger = FlashcardDatabaseMessenger(
-    dbCollection=flashcardCollection)
+flashcardDatabaseMessenger = CreateFlashcardDatabaseMessenger(
+    username=DB_USERNAME, password=DB_PASSWORD, dbName=DB_NAME, 
+    flashcardCollectionName=DB_FLASHCARD_COLLECTION_NAME)
 
 ## Main
 #### Obtain FlashcardsManager
