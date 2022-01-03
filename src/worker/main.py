@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import datetime, logging, os, pathlib, sys, time
+import datetime, logging, os, sys, time
 import math, signal
 from functools import partial
 from logging.handlers import RotatingFileHandler

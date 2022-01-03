@@ -3,8 +3,6 @@ import datetime, logging, os, sys, time
 import argparse, urllib
 from logging.handlers import RotatingFileHandler
 
-import pymongo
-
 from flashcardSystem.flashcardDatabaseMessenger import FlashcardDatabaseMessenger
 
 
@@ -14,6 +12,8 @@ from flashcardSystem.flashcardDatabaseMessenger import FlashcardDatabaseMessenge
 DB_NAME = os.environ.get("APP_DB_NAME")
 DB_USERNAME = os.environ.get("APP_DB_USERNAME")
 DB_PASSWORD = os.environ.get("APP_DB_PASSWORD")
+DB_FLASHCARD_COLLECTION_NAME = os.environ.get(
+    "APP_DB_FLASHCARD_COLLECTION_NAME")
 RELEASE_MODE = os.environ.get("APP_RELEASE_MODE")
 
 SCRIPT_NAME = os.path.basename(__file__).split(".")[0]
@@ -59,16 +59,29 @@ log.debug("Python version: %s", sys.version.split(" ")[0] )
 
 
 #### #### #### #### #### 
+#### Functions #### 
+#### #### #### #### #### 
+def CreateFlashcardDatabaseMessenger(username:str, password:str, 
+        dbName:str, flashcardCollectionName:str
+    ) -> FlashcardDatabaseMessenger:
+    try:
+        flashcardDatabaseMessenger = FlashcardDatabaseMessenger(
+            username=username, password=password, 
+            dbName=dbName, flashcardCollectionName=flashcardCollectionName)
+    except:
+        log.exception("Error message: ")
+        log.critical( (
+            f"{CreateFlashcardDatabaseMessenger.__name__} encountered exception "
+            f"when creating {FlashcardDatabaseMessenger.__name__}") )
+        sys.exit(1)
+    return flashcardDatabaseMessenger
+
+
+#### #### #### #### #### 
 #### Main #### 
 #### #### #### #### #### 
 ## Prologue
 log.info("Program starts")
-
-## Pre-condition
-#### Ensure both username and password exist for database accessing 
-if (DB_USERNAME is None) or (DB_PASSWORD is None):
-    log.error("Database username or password is undefined")
-    sys.exit(1)
 
 ## Pre-processing
 ####Reads settings from CLI arguments
@@ -79,19 +92,14 @@ parser.add_argument("-f", "--file",
     type=str,
     required=True,
     help="Path of the file for importing")
-#### Connects to the database
-escaped_password = urllib.parse.quote_plus(DB_PASSWORD)
-host = f"mongodb://{DB_USERNAME}:{escaped_password}@database/{DB_NAME}"
-client = pymongo.MongoClient(host)
-db = client[DB_NAME]
-flashcardCollection = db["flashcardCollection"]
 
 ## Variables initialization
 args = parser.parse_args()
 importFileName = args.file
 importFilePath = os.path.join(TEMP_DIRECTORY, importFileName)
-flashcardDatabaseMessenger = FlashcardDatabaseMessenger(
-    dbCollection=flashcardCollection)
+flashcardDatabaseMessenger = CreateFlashcardDatabaseMessenger(
+    username=DB_USERNAME, password=DB_PASSWORD, dbName=DB_NAME, 
+    flashcardCollectionName=DB_FLASHCARD_COLLECTION_NAME)
 
 ## Pre-condition
 if not os.path.isfile(importFilePath):
