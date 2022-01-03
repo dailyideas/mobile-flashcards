@@ -3,10 +3,13 @@
 ## Table of contents
 1. [Background](#Background)
 1. [Prerequisites](#Prerequisites)
+1. [Warnings](Warnings)
 1. [Installation guide](#Installation-guide)
 1. [Installation verification](#Installation-verification)
 1. [Optional set-ups](#Optional-set-ups)
 1. [Usage](#Usage)
+1. [Licensing](#Licensing)
+1. [Dependencies](#Dependencies)
 
 ## Background
 It is very common for me to have learnt something, and then forgetting it after a day or two, if the same information does not appear to me repeatedly. Using flashcards may help. However, I'm too lazy to jot things down on physical flashcards. Even if I have written some, I may not have the motivation to pick them up and refresh my memory. Flashcard Apps could be an alternative. I want to have a handy flashcard system which I can add and delete flashcards, and the flashcard system will pop up random flashcards I added from time to time. Instead of searching the App store / Google Play Store for an app that meets my requirements, which are usually too bulky in functionalities, I decided to make one myself. 
@@ -17,7 +20,7 @@ The project uses *Docker* as the platform. *MongoDB* as the backend to store the
 1. A computer
 2. Telegram installed on your phone
 
-## Notices
+## Warnings
 1. This project was tested on *Ubuntu Focal 20.04* only. The [_Installation guide_](#Installation-guide) may not be applicable to other versions and Operating systems.
 
 ## Installation guide
@@ -198,3 +201,25 @@ help; [instruction type]
 
 ## Licensing
 This project is licensed under the MIT License. See [LICENSE](./LICENSE) for the full license text.
+
+## Dependencies
+This project is dependent on third-party libraries or other resources listed below.
+
+1. Docker
+    - Docker Inc.
+    - [Apache License 2.0](https://docs.docker.com/engine/install/#licensing)
+1. Docker compose
+    - Docker Inc.
+    - [Apache License 2.0](https://github.com/docker/compose/blob/v2/LICENSE)
+1. MongoDB
+    - MongoDB, Inc.
+    - [Server Side Public License (SSPL) v1](https://github.com/mongodb/mongo/blob/master/LICENSE-Community.txt)
+1. NumPy
+    - NumPy Developers.
+    - [NumPy license](https://numpy.org/doc/stable/license.html#)
+1. pymongo
+    - MongoDB, Inc.
+    - [Apache License 2.0](https://github.com/mongodb/mongo-python-driver/blob/master/LICENSE)
+1. python-telegram-bot
+    - python-telegram-bot
+    - [LGPL-3](https://github.com/python-telegram-bot/python-telegram-bot/blob/master/LICENSE)
