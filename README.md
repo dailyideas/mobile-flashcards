@@ -98,7 +98,7 @@ Instruction types are not case-sensitive. That is, for the instruction *add*, yo
 add; <key>; <explanation>; [remarks]
 ```
 - Parameters:
-    - *key*: the word / phase that you want to remember. **Cannot** be pure numbers.
+    - *key*: the word / phase that you want to memorize. **Cannot** be pure numbers.
     - *explanation*: the explanation of the key so that you know what it means
     - *remarks* (Optional): Some extra information you would like to add. e.g. an example usage of the key in a sentence.
 - Reply from bot:
