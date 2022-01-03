@@ -98,6 +98,15 @@ class FlashcardUserMessenger:
         
     def GetUserInstructions(self, latestInstructionId:int=None) -> list:
         ## Inner functions
+        def _GetChatMemberIdOfTelegramMessage(message:telegram.Message) -> int:
+            if not isinstance(message, telegram.Message):
+                return None
+            chatInfo = message.chat
+            if not isinstance(chatInfo, telegram.Chat):
+                return None
+            chatMemberId = chatInfo.id
+            return chatMemberId
+        
         def _GetInstruction(update:telegram.Update) -> Instruction:
             ## Variables intialization
             updateId = update.update_id
@@ -132,6 +141,9 @@ class FlashcardUserMessenger:
             updates = self._bot.get_updates(offset=nextUpdateId, timeout=2.)
         instructions = []
         for update in updates:
+            chatId = _GetChatMemberIdOfTelegramMessage(update.message)
+            if chatId is None:
+                continue
             newInstruction = _GetInstruction(update=update)
             instructions.append(newInstruction)
         return instructions

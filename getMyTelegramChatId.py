@@ -54,13 +54,13 @@ except:
 
 updates = bot.get_updates()
 for update in updates:
-    messageInfo = update["message"]
-    if not isinstance(messageInfo, telegram.message.Message):
+    messageInfo = update.message
+    if not isinstance(messageInfo, telegram.Message):
         continue
-    chatInfo = messageInfo["chat"]
-    if not isinstance(chatInfo, telegram.chat.Chat):
+    chatInfo = messageInfo.chat
+    if not isinstance(chatInfo, telegram.Chat):
         continue
-    chatMemberId = chatInfo["id"]
-    chatMemberLastName = chatInfo["last_name"]
-    chatMemberFirstName = chatInfo["first_name"]
+    chatMemberId = chatInfo.id
+    chatMemberLastName = chatInfo.last_name
+    chatMemberFirstName = chatInfo.first_name
     print(f"Obtained a message from \"{chatMemberFirstName} {chatMemberLastName}\" with chat id: {chatMemberId}")
