@@ -96,7 +96,7 @@ class FlashcardUserMessenger:
         return isinstance(result, telegram.Message)
         
         
-    def GetUserInstructions(self, latestInstructionId:int=None) -> list:
+    def GetUserInstructions(self, lastInstructionId:int=-1) -> list:
         ## Inner functions
         def _GetChatMemberIdOfTelegramMessage(message:telegram.Message) -> int:
             if not isinstance(message, telegram.Message):
@@ -134,19 +134,22 @@ class FlashcardUserMessenger:
             return instruction
         
         ## Main
-        if latestInstructionId is None:
+        if (not isinstance(lastInstructionId, int) ) or lastInstructionId < 0:
             updates = self._bot.get_updates(timeout=2.)
         else:
-            nextUpdateId = latestInstructionId + 1
+            nextUpdateId = lastInstructionId + 1
             updates = self._bot.get_updates(offset=nextUpdateId, timeout=2.)
         instructions = []
+        latestUpdateId = -1
         for update in updates:
+            latestUpdateId = max(latestUpdateId, update.update_id)
             chatId = _GetChatMemberIdOfTelegramMessage(update.message)
-            if chatId is None:
+            if chatId != self._chatId:
+                log.warning(f"{self.GetUserInstructions.__name__} found an update sent from chatId: {chatId}, which is not the owner")
                 continue
             newInstruction = _GetInstruction(update=update)
             instructions.append(newInstruction)
-        return instructions
+        return instructions, latestUpdateId
 
 
     @classmethod

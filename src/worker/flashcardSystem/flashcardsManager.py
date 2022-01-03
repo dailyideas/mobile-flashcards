@@ -54,7 +54,7 @@ class FlashcardsManager:
         ## Main
         self._numJobsPerHour = numJobsPerHour
         self._lastUpdateDatetime = None ## datetime.datetime: Renewed whenever "ShowRandomFlashcardsWithPriority" is called
-        self._latestInstructionId = None ## int
+        self._lastInstructionId = -1 ## int
         self._questionToAnswer = -1
         self._questionAskedDatetime = datetime.datetime.now()
         self._dailyFlashcardShowingFrequency = 10
@@ -136,20 +136,22 @@ class FlashcardsManager:
             userMessenger:FlashcardUserMessenger
         ) -> None:
         ## Main
-        instructions = userMessenger.GetUserInstructions(
-            latestInstructionId=self._latestInstructionId)
+        instructions, latestInstructionsId = \
+            userMessenger.GetUserInstructions(
+                lastInstructionId=self._lastInstructionId)
         for instruction in instructions:
             self._HandleInstruction(instruction=instruction, 
                 dbMessenger=dbMessenger, userMessenger=userMessenger)
         ## Post-processing
-        if len(instructions):
+        if latestInstructionsId > self._lastInstructionId:
             #### Store latest instruction id for next FlashcardUserMessenger.GetUserInstructions
-            self._latestInstructionId = instructions[-1].Id
+            self._lastInstructionId = latestInstructionsId
+        if len(instructions):
             #### Possible increase of priority at current hour
             currentHour = datetime.datetime.now().hour
             priorityChange = FlipBiasedCoin(pOf1=0.6)
-            self._ChangeTimePriority(timeIdx=currentHour, 
-                change=priorityChange)
+            if priorityChange > 0:
+                self._ChangeTimePriority(timeIdx=currentHour, change=1)
             
             
     def ShowRandomFlashcardsWithPriority(self,
