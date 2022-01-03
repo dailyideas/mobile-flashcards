@@ -54,7 +54,7 @@ class FlashcardsManager:
         ## Main
         self._numJobsPerHour = numJobsPerHour
         self._lastUpdateDatetime = None ## datetime.datetime: Renewed whenever "ShowRandomFlashcardsWithPriority" is called
-        self._latestInstructionId = None ## int: 
+        self._latestInstructionId = None ## int
         self._questionToAnswer = -1
         self._questionAskedDatetime = datetime.datetime.now()
         self._dailyFlashcardShowingFrequency = 10
@@ -622,7 +622,7 @@ class FlashcardsManager:
         def _RescalePriorities():
             maxPriority = np.max(self._timeOfDayPriorities)
             newPriorities_float = self._timeOfDayPriorities / maxPriority * \
-                cls.HIGHEST_TIME_PRIORITY
+                cls.HIGHEST_TIME_PRIORITY / 2
             self._timeOfDayPriorities = newPriorities_float.astype(int)
             log.info(f"{self._ChangeTimePriority.__name__} has rescaled the time priorities")
         
@@ -653,6 +653,15 @@ class FlashcardsManager:
                     text="Time priority is unchanged")
             log.info(f"{self._ChangeTimePriority.__name__} found the change to be 0")
             return True
+        ## Pre-processing
+        if abs(change) < cls.LOWEST_TIME_PRIORITY:
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text=f"Time priority change cannot be smaller than {cls.LOWEST_TIME_PRIORITY}")
+        if abs(change) > cls.HIGHEST_TIME_PRIORITY:
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text=f"Time priority change cannot be larger than {cls.HIGHEST_TIME_PRIORITY}")
         ## Main
         change_unsigned = max(cls.LOWEST_TIME_PRIORITY, 
             min( abs(change), cls.HIGHEST_TIME_PRIORITY) )
