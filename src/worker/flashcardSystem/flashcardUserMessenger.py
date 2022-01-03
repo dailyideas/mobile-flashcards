@@ -100,7 +100,13 @@ class FlashcardUserMessenger:
         
     def GetUserInstructions(self, lastInstructionId:int=-1) -> list:
         ## Inner functions
-        def _GetChatMemberIdOfTelegramMessage(message:telegram.Message) -> int:
+        def _GetChatMemberIdOfTelegramMessage(update:telegram.Update) -> int:
+            ## Variables initialization
+            if isinstance(update.message, telegram.Message):
+                message = update.message
+            elif isinstance(update.edited_message, telegram.Message):
+                message = update.edited_message
+            ## Main
             if not isinstance(message, telegram.Message):
                 return None
             chatInfo = message.chat
@@ -145,7 +151,7 @@ class FlashcardUserMessenger:
         latestUpdateId = -1
         for update in updates:
             latestUpdateId = max(latestUpdateId, update.update_id)
-            chatId = _GetChatMemberIdOfTelegramMessage(update.message)
+            chatId = _GetChatMemberIdOfTelegramMessage(update)
             if chatId != self._chatId:
                 log.warning(f"{self.GetUserInstructions.__name__} found an update sent from chatId: {chatId}, which is not the owner")
                 continue
@@ -185,4 +191,3 @@ class FlashcardUserMessenger:
             result += f"{flashcard.Priority}\n"
         result = result.rstrip("\n")
         return result
-        

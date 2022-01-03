@@ -77,8 +77,8 @@ class FlashcardsManager:
     @property
     def Version(self) -> str:
         return self._version
-    
-    
+
+
     @property
     def NumJobsPerHour(self) -> int:
         return self._numJobsPerHour
@@ -287,6 +287,9 @@ class FlashcardsManager:
     def _DisplayCustomTextToUser(cls, userMessenger:FlashcardUserMessenger, 
             text:str
         ) -> bool:
+        if not isinstance(userMessenger, FlashcardUserMessenger):
+            log.error(f"{cls._DisplayCustomTextToUser.__name__} found userMessenger not an {FlashcardUserMessenger.__name__} object")
+            return False
         isSuccess = userMessenger.ShowCustomText(text=text, autoEscape=True)
         if isSuccess is False:
             log.error(f"{cls._DisplayCustomTextToUser.__name__} failed to show custom text to user")
@@ -352,6 +355,15 @@ class FlashcardsManager:
             dbMessenger:FlashcardDatabaseMessenger,
             userMessenger:FlashcardUserMessenger
         ) -> bool:
+        ## Pre-condition
+        keyAsInt = TryStringToInt(instruction.Key)
+        if isinstance(keyAsInt, int):
+            cls._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Key of flashcard cannot be an integer")
+            log.warning(f"{cls._InsertFlashcard.__name__} found the key invalid. \"Key\": {instruction.Key}")
+            return False
+        ## Main
         existingFlashcard = dbMessenger.GetFlashcardByKey(
             key=instruction.Key)
         if isinstance(existingFlashcard, Flashcard):
@@ -629,70 +641,84 @@ class FlashcardsManager:
         return isSuccess
     
     
-    def _ChangeTimePriority(self, instruction:Instruction=None, 
-            timeIdx:int=None, change:int=None, 
+    def _ChangeTimePriority_FromInstruction(self, 
+            instruction:Instruction=None,
             userMessenger:FlashcardUserMessenger=None
         ) -> bool:
         ## Variables initialization
-        cls = type(self)
-        
+        timeIdx = TryStringToInt(instruction.Key)
+        change = TryStringToInt(instruction.Value)
+        ## Pre-condition
+        if not isinstance(timeIdx, int) or timeIdx < 0 or \
+            timeIdx >= len(self._timeOfDayPriorities):
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Cannot obtain a valid time index for time priority change (Range: [0, 23])")
+            log.warning(f"{self._ChangeTimePriority_FromInstruction.__name__} cannot obtain a valid time index for time priority change. \"Key\": {instruction.Key}")
+            return False
+        if not isinstance(change, int):
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Cannot obtain an integer for time priority change")
+            log.warning(f"{self._ChangeTimePriority_FromInstruction.__name__} could not obtain an integer for time priority change. \"Value\": {instruction.Value}")
+            return False
+        if abs(change) > self.HIGHEST_TIME_PRIORITY:
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text=f"Absolute value of the time priority change cannot be larger than {self.HIGHEST_TIME_PRIORITY}")
+            log.warning(f"{self._ChangeTimePriority_FromInstruction.__name__} found the absolute value of the change larger than {self.HIGHEST_TIME_PRIORITY}. \"Change\": {change}")
+            return False
+        if change == 0:
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text="Time priority is unchanged")
+            log.info(f"{self._ChangeTimePriority_FromInstruction.__name__} found the change to be 0")
+            return True
+        ## Pre-processing
+        if self._timeOfDayPriorities[timeIdx] + change < self.LOWEST_TIME_PRIORITY:
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text=f"Time priority cannot be smaller than {self.LOWEST_TIME_PRIORITY}. Therefore, it is set to {self.LOWEST_TIME_PRIORITY}")
+        ## Main
+        self._ChangeTimePriority(timeIdx=timeIdx, change=change)
+        self._DisplayCustomTextToUser(
+            userMessenger=userMessenger,
+            text=f"Time priority at hour {timeIdx} is changed")
+        log.info(f"{self._ChangeTimePriority_FromInstruction.__name__} changed the priority at hour {timeIdx} to {self._timeOfDayPriorities[timeIdx] }")
+        return True
+
+
+    def _ChangeTimePriority(self, timeIdx:int, change:int):
         ## Inner functions
         def _RescalePriorities():
             maxPriority = np.max(self._timeOfDayPriorities)
             newPriorities_float = self._timeOfDayPriorities / maxPriority * \
-                cls.HIGHEST_TIME_PRIORITY / 2
+                self.HIGHEST_TIME_PRIORITY / 2
             self._timeOfDayPriorities = newPriorities_float.astype(int)
             log.info(f"{self._ChangeTimePriority.__name__} has rescaled the time priorities")
-        
-        ## Variables initialization
-        if isinstance(instruction, Instruction):
-            timeIdx = TryStringToInt(instruction.Key)
-            change = TryStringToInt(instruction.Value)
+
         ## Pre-condition
-        if not isinstance(timeIdx, int) or timeIdx < 0 or \
-            timeIdx >= len(self._timeOfDayPriorities):
-            if isinstance(userMessenger, FlashcardUserMessenger):
-                self._DisplayCustomTextToUser(
-                    userMessenger=userMessenger,
-                    text="Cannot obtain a valid time index for time priority change (Range: [0, 23])")
-            log.warning(f"{self._ChangeTimePriority.__name__} cannot obtain a valid time index for time priority change. \"Key\": {instruction.Key}")
-            return False
+        if not isinstance(timeIdx, int):
+            log.error(f"{self._ChangeTimePriority.__name__} found timeIdx {timeIdx} not an integer")
+            return
+        if timeIdx < 0 or timeIdx > HOURS_IN_DAY:
+            log.error(f"{self._ChangeTimePriority.__name__} cannot be changed as timeIdx {timeIdx} is not valid")
+            return
         if not isinstance(change, int):
-            if isinstance(userMessenger, FlashcardUserMessenger):
-                self._DisplayCustomTextToUser(
-                    userMessenger=userMessenger,
-                    text="Cannot obtain an integer for time priority change")
-            log.warning(f"{self._ChangeTimePriority.__name__} could not obtain an integer for time priority change. \"Value\": {instruction.Value}")
-            return False
+            log.error(f"{self._ChangeTimePriority.__name__} found the change {change} not an integer")
+            return
+        if abs(change) > self.HIGHEST_TIME_PRIORITY:
+            log.error(f"{self._ChangeTimePriority.__name__} cannot be changed as the change {change} exceeds {self.HIGHEST_TIME_PRIORITY}")
+            return
         if change == 0:
-            if isinstance(userMessenger, FlashcardUserMessenger):
-                self._DisplayCustomTextToUser(
-                    userMessenger=userMessenger,
-                    text="Time priority is unchanged")
-            log.info(f"{self._ChangeTimePriority.__name__} found the change to be 0")
-            return True
-        ## Pre-processing
-        if abs(change) < cls.LOWEST_TIME_PRIORITY:
-            self._DisplayCustomTextToUser(
-                userMessenger=userMessenger,
-                text=f"Time priority change cannot be smaller than {cls.LOWEST_TIME_PRIORITY}")
-        if abs(change) > cls.HIGHEST_TIME_PRIORITY:
-            self._DisplayCustomTextToUser(
-                userMessenger=userMessenger,
-                text=f"Time priority change cannot be larger than {cls.HIGHEST_TIME_PRIORITY}")
+            log.info(f"{self._ChangeTimePriority.__name__} unchanged as the provided value is 0")
+            return
         ## Main
-        change_unsigned = max(cls.LOWEST_TIME_PRIORITY, 
-            min( abs(change), cls.HIGHEST_TIME_PRIORITY) )
-        change = int(math.copysign(change_unsigned, change) )
-        self._timeOfDayPriorities[timeIdx] += change
-        self._DisplayCustomTextToUser(
-            userMessenger=userMessenger,
-            text=f"Time priority at hour {timeIdx} is changed to {self._timeOfDayPriorities[timeIdx] }")
-        log.info(f"{self._ChangeTimePriority.__name__} changed the priority at hour {timeIdx} to {self._timeOfDayPriorities[timeIdx] }")
+        self._timeOfDayPriorities[timeIdx] = max(
+            0, self._timeOfDayPriorities[timeIdx] + change)
         ## Post-processing
-        if self._timeOfDayPriorities[timeIdx] > cls.HIGHEST_TIME_PRIORITY:
+        if self._timeOfDayPriorities[timeIdx] > self.HIGHEST_TIME_PRIORITY:
             _RescalePriorities()
-        return True
     
     
     def _ShowHelpToUser(self, instruction:Instruction, 
@@ -736,7 +762,7 @@ class FlashcardsManager:
             self._ShowInfoToUser(dbMessenger=dbMessenger, 
                 userMessenger=userMessenger)
         elif instruction.Type == InstructionType.CHANGE_TIME_PRIORITY:
-            self._ChangeTimePriority(instruction=instruction,
+            self._ChangeTimePriority_FromInstruction(instruction=instruction,
                 userMessenger=userMessenger)
         elif instruction.Type == InstructionType.SHOW_HELP:
             self._ShowHelpToUser(instruction=instruction, 

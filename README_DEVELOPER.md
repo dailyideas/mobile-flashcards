@@ -23,6 +23,9 @@
 - Get the Bash prompt of the containers
     - `docker-compose exec worker bash`
     - `docker-compose exec database bash`
+- Fetch the logs of a container
+    - `docker logs flashcard-worker`
+    - `docker logs flashcard-database`
 - References
     - Doc: [Reference documentation](https://docs.docker.com/reference/)
     - Guide: [Build images with BuildKit](https://docs.docker.com/develop/develop-images/build_enhancements/)

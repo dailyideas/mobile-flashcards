@@ -52,7 +52,7 @@ except:
         msg="Encounter an unexpected error",
         status=1)
 
-updates = bot.get_updates(offset=-1)
+updates = bot.get_updates()
 for update in updates:
     messageInfo = update.message
     if not isinstance(messageInfo, telegram.Message):

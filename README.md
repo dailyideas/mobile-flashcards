@@ -149,7 +149,7 @@ pri; <key>; <value>
 
 ### Change time priority
 ```
-pri; <hour index>; <value>
+time; <hour index>; <value>
 ```
 - Background:
     - Each hour in the 24-hour clock format has its priority value. This value determines the probability of the bot to perform flashcard pop up(s) in this hour. The range of priority value is `[0, 999]`, larger for higher priority. 
