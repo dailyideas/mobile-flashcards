@@ -6,7 +6,7 @@
 1. [MongoDB cheat sheet & tutorials](#MongoDB-cheat-sheet-&-tutorials)
 
 # Git commit message best practices
-Mainly following the conventions suggested by [kazupon/git-commit-message-convention](https://github.com/kazupon/git-commit-message-convention).
+Mainly following the conventions suggested by [kazupon/git-commit-message-convention](https://github.com/kazupon/git-commit-message-convention). Therefore, this section is copied and modified from [kazupon/git-commit-message-convention](https://github.com/kazupon/git-commit-message-convention), which is licensed under the [MIT License](https://github.com/kazupon/git-commit-message-convention/blob/master/LICENSE).
 
 ### Commit message format
 ```
@@ -78,6 +78,9 @@ Specifying place or category of the commit change.
 - References
     - Doc: [Reference documentation](https://docs.docker.com/reference/)
     - Guide: [Build images with BuildKit](https://docs.docker.com/develop/develop-images/build_enhancements/)
+
+### Tutorials
+- Guide: [Best practices for writing Dockerfiles](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
 
 # MongoDB cheat sheet & tutorials
 ### Cheat sheet

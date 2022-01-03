@@ -56,7 +56,6 @@ The project uses *Docker* as the platform. *MongoDB* as the backend to store the
     - Refer to [here](#Optional-set-ups) for optional setups.
 1. Build the containers
     - Run command `DOCKER_BUILDKIT=1 docker-compose build`.
-    - You should see `Successfully tagged mobile-flashcards_worker:latest` at the end of the console output.
     - [Official Manual](https://docs.docker.com/compose/reference/build/)
 1. Start the containers
     - Run command `docker-compose up -d`.
