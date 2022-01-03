@@ -69,7 +69,7 @@ In telegram, send the word `info` to your bot. Installation is successful if you
 If any value is changed after the step *Build the containers* in the [Installation guide](#Installation-guide), perform the steps *Build the containers* and *Start the containers* again so the change will take effect. 
 
 ### `FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR`
-- Number of times in an hour that the bot will determine whether to perform flashcard pop-up(s) or not. Default is *12*, that is, the bot would consider flashcard pop-up(s) at every 5 minutes. You can change it to a value given that *60* is divisible by the value. i.e. 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60. 
+- Number of times in an hour that the bot will determine whether to perform flashcard pop-up(s) or not. Default is *12*, that is, the bot would consider flashcard pop-up(s) at every 5 minutes. You can change it to an integer given that *60* is divisible by it. i.e. 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60. 
 
 # Usage
 ## Prologue
