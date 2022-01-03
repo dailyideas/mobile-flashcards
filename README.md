@@ -195,3 +195,6 @@ help; [instruction type]
     - instruction type (Optional): Provide the instruction type if you want to know the usage of a particular instruction. Ignore it if you just want to obtain the list of available instructions.
 - Reply from bot:
     - The list of available instructions, or the usage of a particular instruction.
+
+## Licensing
+This project is licensed under the MIT License. See [LICENSE](./LICENSE) for the full license text.
