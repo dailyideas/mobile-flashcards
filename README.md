@@ -1,7 +1,12 @@
 # mobile-flashcards
 
 ## Table of contents
-
+1. [Background](#Background)
+1. [Prerequisites](#Prerequisites)
+1. [Installation guide](#Installation-guide)
+1. [Installation verification](#Installation-verification)
+1. [Optional set-ups](#Optional-set-ups)
+1. [Usage](#Usage)
 
 ## Background
 It is very common for me to have learnt something, and then forgetting it after a day or two, if the same information does not appear to me repeatedly. Using flashcards may help. However, I'm too lazy to jot things down on physical flashcards. Even if I have written some, I may not have the motivation to pick them up and refresh my memory. Flashcard Apps could be an alternative. I want to have a handy flashcard system which I can add and delete flashcards, and the flashcard system will pop up random flashcards I added from time to time. Instead of searching the App store / Google Play Store for an app that meets my requirements, which are usually too bulky in functionalities, I decided to make one myself. 
@@ -44,7 +49,7 @@ The project uses *Docker* as the platform. *MongoDB* as the backend to store the
     - In the project directory, copy `.env.example` and name it as `.env`.
     - Copy and paste the *token* obtained in the step "Create a new Telegram bot" after `TG_FLASHCARD_BOT_TOKEN=`.
     - Copy and paste the *Chat ID* obtained in the step "Obtain your Telegram Chat ID" after `TG_FLASHCARD_BOT_CHAT_ID=`.
-    - Refer to [this](#) for optional setups.
+    - Refer to [here](#Optional-set-ups) for optional setups.
 1. Build the containers
     - Run command `DOCKER_BUILDKIT=1 docker-compose build`.
     - You should see `Successfully tagged mobile-flashcards_worker:latest` at the end of the console output.
@@ -61,7 +66,7 @@ In telegram, send the word `info` to your bot. Installation is successful if you
 #### `FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR`
 - Number of times in an hour that the bot will determine whether to perform flashcard pop-up(s) or not. Default is *12*, that is, the bot would consider flashcard pop-up(s) at every 5 minutes. You can change it to a value given that *60* is divisible by the value. i.e. 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60. 
 
-## API
+## Usage
 ### Prologue
 Every message you sent to your bot should follow a specific format. If the format is not observed, the bot will not be able to interpret the message and `Unknown instruction` will be replied. 
 
@@ -84,7 +89,7 @@ You are allowed to add or not adding whitespaces before and after the semi-colon
 
 Instruction types are not case sensitive. That is, for the instruction *add*, you can also type *Add* / *ADD* / *aDd*, etc. However, parameters are case-sensitive, so you may store the word *apple* and *Apple* as two flashcards. 
 
-### Instructions
+### Available instructions
 #### Add a flashcard
 ```
 add; <key>; <explanation>; [remarks]
@@ -134,7 +139,7 @@ pri; <key>; <value>
     - Increase / decrease the probability of the flashcard being seleted by the bot for random flashcard pop ups.
 - Parameters:
     - *key*: The *key* or the *ID* of the flashcard you want to have the priority changed.
-    - *value*: The value to be added to the flashcard's current priority. If you want to reduce the priority, provide a negative value.
+    - *value*: The value to be added to the flashcard's current priority. If you want to reduce the priority, provide a negative value. If the value is not provided, *1* is assumed.
 - Reply from bot:
     - The *key* of the flashcard with priority changed.
 
@@ -151,7 +156,7 @@ pri; <hour index>; <value>
     - Increase / decrease the probability of flashcard pop up(s) for a specific hour. 
 - Parameters:
     - *hour index*: The hour to have its priority changed. Range is `[0, 23]`, in local time zone. 
-    - *value*: The value to be added to the hour's current priority. If you want to reduce the priority, provide a negative value.
+    - *value*: The value to be added to the hour's current priority. If you want to reduce the priority, provide a negative value. If the value is not provided, *1* is assumed.
 - Reply from bot:
     - The new priority value at that hour.
 
@@ -172,13 +177,15 @@ info
 ```
 - Usage:
     - Show information of the current flashcard system.  
+- Reply from bot:  
+    - Exmaple:  
     ![README_ShowInfoExplanation01](./assets/README_ShowInfoExplanation01.png)
     - All the 3-digit arrays are in row-major order.
     - *Flashcard showing distribution*: 
         - *Day*: number of flashcard pop-ups at each hour of the day. It will be regenerated at the start of each day, or whenever the *flashcard pop-ups frequency* changed.
         - *Hour*: number of flashcard pop-ups at each *job* of the current hour. It will be regenerated at the start of each hour, or whenever the *flashcard pop-ups frequency* changed. Number of *jobs* in an hour is defined in the `.env` file. 
 
-#### Show help
+#### Show helps
 ```
 help; [instruction type]
 ```
