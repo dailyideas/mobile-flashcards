@@ -1,6 +1,6 @@
-# mobile-flashcards
+# mobile-flashcards README
 
-## Table of contents
+# Table of contents
 1. [Background](#Background)
 1. [Prerequisites](#Prerequisites)
 1. [Warnings](Warnings)
@@ -12,19 +12,19 @@
 1. [Dependencies](#Dependencies)
 1. [Versioning](#Versioning)
 
-## Background
+# Background
 It is very common for me to have learnt something, and then forgetting it after a day or two, if the same information does not appear to me repeatedly. Using flashcards may help. However, I'm too lazy to jot things down on physical flashcards. Even if I have written some, I may not have the motivation to pick them up and refresh my memory. Flashcard Apps could be an alternative. I want to have a handy flashcard system which I can add and delete flashcards, and the flashcard system will pop up random flashcards I added from time to time. Instead of searching the App store / Google Play Store for an app that meets my requirements, which are usually too bulky in functionalities, I decided to make one myself. 
 
 The project uses *Docker* as the platform. *MongoDB* as the backend to store the flashcards. *Telegram* as the frontend to interact with the user. Python as the programming language to link everything up. 
 
-## Prerequisites
+# Prerequisites
 1. A computer
 2. [Telegram](https://telegram.org/) installed on your phone
 
-## Warnings
+# Warnings
 1. This project was tested on *Ubuntu Focal 20.04* only. The [_Installation guide_](#Installation-guide) may not be applicable to other versions and operating systems.
 
-## Installation guide
+# Installation guide
 1. Install Docker Engine.
     - [Offical tutorial](https://docs.docker.com/engine/install/)
 1. Manage Docker as a non-root user.
@@ -62,16 +62,16 @@ The project uses *Docker* as the platform. *MongoDB* as the backend to store the
     - Run command `docker-compose up -d`.
     - [Official Manual](https://docs.docker.com/compose/reference/up/)
 
-## Installation verification
+# Installation verification
 In telegram, send the word `info` to your bot. Installation is successful if you get a reply.
 
-## Optional set-ups
-### `.env` file
-#### `FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR`
+# Optional set-ups
+## `.env` file
+### `FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR`
 - Number of times in an hour that the bot will determine whether to perform flashcard pop-up(s) or not. Default is *12*, that is, the bot would consider flashcard pop-up(s) at every 5 minutes. You can change it to a value given that *60* is divisible by the value. i.e. 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60. 
 
-## Usage
-### Prologue
+# Usage
+## Prologue
 Every message you sent to your bot should follow a specific format. If the format is not observed, the bot will not be able to interpret the message and `Unknown instruction` will be replied. 
 
 Basically, an instruction has the following format:
@@ -93,8 +93,8 @@ You are allowed to add or not adding whitespaces before and after the semi-colon
 
 Instruction types are not case-sensitive. That is, for the instruction *add*, you can also type *Add* / *ADD* / *aDd*, etc. However, parameters are case-sensitive, so you may store the word *apple* and *Apple* as two flashcards. 
 
-### Available instructions
-#### Add a flashcard
+## Available instructions
+### Add a flashcard
 ```
 add; <key>; <explanation>; [remarks]
 ```
@@ -109,7 +109,7 @@ add; <key>; <explanation>; [remarks]
     - The *ID* is unique for each flashcard, and can be used to refer to the flashcard in some other instructions. 
     - See instruction [Change flashcard priority](#Change-flashcard-priority) for detailed description of flashcard *priority*.
 
-#### Delete a flashcard
+### Delete a flashcard
 ```
 del; <key>
 ```
@@ -119,7 +119,7 @@ del; <key>
     - The *key* of the flashcard being deleted.  
         ![README_DeleteFlashcardExplanation01](./assets/README_DeleteFlashcardExplanation01.png)
 
-#### Show a flashcard
+### Show a flashcard
 ```
 show; <key>
 ```
@@ -133,7 +133,7 @@ show; <key>
     - Refer to the instruction [Add a flashcard](#Add-a-flashcard) for detailed description of the flashcard.
     - This instruction will not affect the priority of the flashcard.
 
-#### Change flashcard priority
+### Change flashcard priority
 ```
 pri; <key>; <value>
 ```
@@ -147,7 +147,7 @@ pri; <key>; <value>
 - Reply from bot:
     - The *key* of the flashcard with priority changed.
 
-#### Change time priority
+### Change time priority
 ```
 pri; <hour index>; <value>
 ```
@@ -164,7 +164,7 @@ pri; <hour index>; <value>
 - Reply from bot:
     - The new priority value at that hour.
 
-#### Change flashcard pop-ups frequency
+### Change flashcard pop-ups frequency
 ```
 freq; <value>
 ```
@@ -175,7 +175,7 @@ freq; <value>
 - Reply from bot:
     - The new frequency value.
 
-#### Show flashcard system info
+### Show flashcard system info
 ```
 info
 ```
@@ -189,7 +189,7 @@ info
         - *Day*: number of flashcard pop-ups at each hour of the day. It will be regenerated at the start of each day, or whenever the *flashcard pop-ups frequency* changed.
         - *Hour*: number of flashcard pop-ups at each *job* of the current hour. It will be regenerated at the start of each hour, or whenever the *flashcard pop-ups frequency* changed. Number of *jobs* in an hour is defined in the `.env` file. 
 
-#### Show helps
+### Show helps
 ```
 help; [instruction type]
 ```
@@ -200,10 +200,10 @@ help; [instruction type]
 - Reply from bot:
     - The list of available instructions, or the usage of a particular instruction.
 
-## Licensing
+# Licensing
 This project is licensed under the MIT License. See [LICENSE](./LICENSE) for the full license text.
 
-## Dependencies
+# Dependencies
 This project is dependent on third-party libraries or other resources listed below.
 
 1. Docker
@@ -225,5 +225,5 @@ This project is dependent on third-party libraries or other resources listed bel
     - python-telegram-bot
     - [LGPL-3](https://github.com/python-telegram-bot/python-telegram-bot/blob/master/LICENSE)
 
-## Versioning
+# Versioning
 This project follows the [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html)
