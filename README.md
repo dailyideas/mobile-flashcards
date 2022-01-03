@@ -68,6 +68,12 @@ In telegram, send the word `info` to your bot. Installation is successful if you
 ## `.env` file
 If any value is changed after the step *Build the containers* in the [Installation guide](#Installation-guide), perform the steps *Build the containers* and *Start the containers* again so the change will take effect. 
 
+### `TIMEZONE`
+- If you are not located in Hong Kong, you will probably want to change the timezone information of the flashcard system. See the links below to search for your time zone. Replace `Asia/Hong_Kong` in the file with the chosen time zone name, in the format of `<Region>/<City>`.
+- List of Time Zones
+    - Docs: timezonedb. [List of Time Zones](https://timezonedb.com/time-zones)
+    - Docs: Wikipedia. [List of tz database time zones](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
+
 ### `FLASHCARDS_MANAGER_NUM_JOBS_PER_HOUR`
 - Number of times in an hour that the bot will determine whether to perform flashcard pop-up(s) or not. Default is *12*, that is, the bot would consider flashcard pop-up(s) at every 5 minutes. You can change it to an integer given that *60* is divisible by it. i.e. 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30, 60. 
 
