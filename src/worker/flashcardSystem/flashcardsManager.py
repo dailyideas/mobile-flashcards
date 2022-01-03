@@ -45,6 +45,8 @@ from utils.instruction import InstructionType, Instruction
 class FlashcardsManager:
     LOWEST_TIME_PRIORITY = 0
     HIGHEST_TIME_PRIORITY = 999
+    LOWEST_FLASHCARD_SHOWING_FREQUENCY = 0
+    HIGHEST_FLASHCARD_SHOWING_FREQUENCY = 999
     
     def __init__(self, numJobsPerHour:int=12) -> None:
         ## Variables initialization
@@ -90,6 +92,8 @@ class FlashcardsManager:
     
     @FlashcardShowingFrequency.setter
     def FlashcardShowingFrequency(self, value:int):
+        value = min(max(value, self.LOWEST_FLASHCARD_SHOWING_FREQUENCY), 
+            self.HIGHEST_FLASHCARD_SHOWING_FREQUENCY)
         if self._dailyFlashcardShowingFrequency != value:
             ## Only reset the variables below if the value is changed
             self._dailyFlashcardShowingFrequency = value
@@ -510,6 +514,17 @@ class FlashcardsManager:
                 text="Cannot obtain an integer for frequency change")
             log.warning(f"{self._ChangeFlashcardShowingFrequency.__name__} did not obtain a valid frequency value")
             return False
+        ## Pre-processing
+        if newFrequency < self.LOWEST_FLASHCARD_SHOWING_FREQUENCY:
+            newFrequency = self.LOWEST_FLASHCARD_SHOWING_FREQUENCY
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text=f"Frequency cannot be smaller than {self.LOWEST_FLASHCARD_SHOWING_FREQUENCY}")
+        if newFrequency > self.HIGHEST_FLASHCARD_SHOWING_FREQUENCY:
+            newFrequency = self.HIGHEST_FLASHCARD_SHOWING_FREQUENCY
+            self._DisplayCustomTextToUser(
+                userMessenger=userMessenger,
+                text=f"Frequency cannot be larger than {self.HIGHEST_FLASHCARD_SHOWING_FREQUENCY}")
         ## Main
         self.FlashcardShowingFrequency = newFrequency
         self._DisplayCustomTextToUser(
