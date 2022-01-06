@@ -142,11 +142,17 @@ class FlashcardUserMessenger:
             return instruction
         
         ## Main
-        if (not isinstance(lastInstructionId, int) ) or lastInstructionId < 0:
-            updates = self._bot.get_updates(timeout=2.)
-        else:
-            nextUpdateId = lastInstructionId + 1
-            updates = self._bot.get_updates(offset=nextUpdateId, timeout=2.)
+        updates = []
+        try:
+            if (not isinstance(lastInstructionId, int) ) or lastInstructionId < 0:
+                updates = self._bot.get_updates(timeout=10.)
+            else:
+                nextUpdateId = lastInstructionId + 1
+                updates = self._bot.get_updates(offset=nextUpdateId, timeout=10.)
+        except telegram.error.TimedOut:
+            log.warning(f"{self.GetUserInstructions.__name__} encountered {self._bot.get_updates.__name__} timed out")
+        except:
+            log.error(f"{self.GetUserInstructions.__name__} encountered unexpected error in {self._bot.get_updates.__name__}")
         instructions = []
         latestUpdateId = -1
         for update in updates:
